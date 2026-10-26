@@ -1,0 +1,24 @@
+model.embed_tokens.weight                               ratio=0.1194 kurt=5.388 cDW=+0.023 c|D||W|=+0.017 top/edge=nan n>edge=-1 med/mp=nan
+model.layers.0.input_layernorm.weight                   ratio=0.0151 kurt=2.588 cDW=+0.228 c|D||W|=+0.082 top/edge=nan n>edge=-1 med/mp=nan
+model.layers.0.mlp.down_proj.weight                     ratio=0.1048 kurt=3.185 cDW=+0.072 c|D||W|=+0.012 top/edge=3.323 n>edge=90 med/mp=0.938
+model.layers.0.mlp.gate_proj.weight                     ratio=0.0995 kurt=3.147 cDW=+0.077 c|D||W|=+0.017 top/edge=3.064 n>edge=254 med/mp=0.824
+model.layers.0.mlp.up_proj.weight                       ratio=0.1121 kurt=3.157 cDW=+0.066 c|D||W|=+0.018 top/edge=2.833 n>edge=248 med/mp=0.840
+model.layers.0.post_attention_layernorm.weight          ratio=0.0271 kurt=3.664 cDW=-0.530 c|D||W|=+0.485 top/edge=nan n>edge=-1 med/mp=nan
+model.layers.0.self_attn.k_proj.bias                    ratio=0.0003 kurt=4.925 cDW=+0.436 c|D||W|=+0.300 top/edge=nan n>edge=-1 med/mp=nan
+model.layers.0.self_attn.k_proj.weight                  ratio=0.0472 kurt=3.453 cDW=+0.005 c|D||W|=+0.050 top/edge=2.649 n>edge=22 med/mp=0.816
+Traceback (most recent call last):
+  File "/Users/asthamehta/Documents/projects/Apart_Collusion_Hackathon_Oct_2026/collusion_hackathon/redteaming/investigation/hunt/brain_surgeons/S1_denoise_and_patch/noise_stats.py", line 93, in <module>
+    main()
+  File "/Users/asthamehta/Documents/projects/Apart_Collusion_Hackathon_Oct_2026/collusion_hackathon/redteaming/investigation/hunt/brain_surgeons/S1_denoise_and_patch/noise_stats.py", line 67, in main
+    rows.append(stats(k, d[k], q[k], do_svd))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/asthamehta/Documents/projects/Apart_Collusion_Hackathon_Oct_2026/collusion_hackathon/redteaming/investigation/hunt/brain_surgeons/S1_denoise_and_patch/noise_stats.py", line 46, in stats
+    med_pred = sd * math.sqrt(big) * mp_quantiles(beta, [0.5])[0]
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/asthamehta/Documents/projects/Apart_Collusion_Hackathon_Oct_2026/collusion_hackathon/redteaming/investigation/hunt/brain_surgeons/S1_denoise_and_patch/noise_stats.py", line 22, in mp_quantiles
+    return [math.sqrt(float(x[torch.searchsorted(cdf, torch.tensor(q, dtype=torch.float64))])) for q in qs]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/asthamehta/Documents/projects/Apart_Collusion_Hackathon_Oct_2026/collusion_hackathon/redteaming/investigation/hunt/brain_surgeons/S1_denoise_and_patch/noise_stats.py", line 22, in <listcomp>
+    return [math.sqrt(float(x[torch.searchsorted(cdf, torch.tensor(q, dtype=torch.float64))])) for q in qs]
+                            ~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+IndexError: index 20001 is out of bounds for dimension 0 with size 20001

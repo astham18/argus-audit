@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>All 72 single attention heads, switched off one at a time</title>
+<style>
+:root{--bg:#fff;--fg:#1f2328;--muted:#59636e;--card:#f6f8fa;--line:#d1d9e0;--accent:#0969da;--sel:#ddf4ff;
+--a:#0969da;--b:#bc4c00;--bar:#8250df;--ok:#1a7f37;--bad:#cf222e;--chip:#eaeef2}
+@media (prefers-color-scheme: dark){:root{--bg:#0d1117;--fg:#e6edf3;--muted:#9198a1;--card:#161b22;--line:#3d444d;
+--accent:#4493f8;--sel:#1f2d3d;--a:#4493f8;--b:#f0883e;--bar:#a371f7;--ok:#3fb950;--bad:#f85149;--chip:#262c36}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+header,section{padding:12px 20px}h1{font-size:1.35rem;margin:.2em 0}h2{font-size:1.05rem;margin:.6em 0 .3em}
+a{color:var(--accent)}.muted{color:var(--muted)}.small{font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0}
+.controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:end}
+.controls label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:2px}
+select,input,button{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+button{cursor:pointer}button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+th{background:var(--card);position:sticky;top:0;z-index:1;font-weight:600}
+#tbl tbody tr{cursor:pointer}#tbl tbody tr:hover{background:var(--card)}#tbl tbody tr.sel{background:var(--sel);outline:2px solid var(--accent)}
+td.out{min-width:26ch;max-width:44ch;white-space:pre-wrap;word-break:break-word}td.pr{min-width:24ch;max-width:40ch;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
+td.meta{min-width:14ch;max-width:26ch}td.idc{min-width:16ch;max-width:24ch}
+table.pivot{width:auto;min-width:40%}details.more{margin-top:6px}details.more>summary{cursor:pointer;color:var(--muted);font-size:12px}
+.chip{display:inline-block;background:var(--chip);border-radius:10px;padding:0 7px;margin:1px 2px 1px 0;font-size:12px;white-space:nowrap}
+.chip.on{background:var(--accent);color:#fff}.num{font-variant-numeric:tabular-nums}
+.pivot td,.pivot th{text-align:right}.pivot td:first-child,.pivot th:first-child{text-align:left}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:2px 6px;align-items:center;font-size:12px;min-width:180px}
+.bar{height:9px;background:var(--bar);border-radius:3px}
+#detail{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:5}
+#detail .panel{position:absolute;top:3vh;bottom:3vh;left:50%;transform:translateX(-50%);width:min(1200px,96vw);
+background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow:auto;padding:16px 20px}
+pre{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;margin:4px 0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.vh{font-weight:600}.va{color:var(--a)}.vb{color:var(--b)}
+.tabs button{border-radius:6px 6px 0 0;border-bottom:none}.tabs button.on{background:var(--card);font-weight:600}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;font-size:11px}
+</style></head><body>
+<header>
+  <h1 id="ttl"></h1>
+  <p class="muted" id="sub"></p>
+  <div class="card small" id="rule"></div>
+</header>
+<section class="tabs" id="tabs" style="display:none"></section>
+<div id="main">
+<section>
+  <h2>Summary of the rows shown</h2>
+  <p class="muted small">These numbers are recomputed in your browser from the rows that pass the filters below, so you can watch the report's numbers come out of the examples. Each cell is the rate (or mean) with the number of outputs in brackets.</p>
+  <div class="controls">
+    <label>Group rows by<select id="grp"></select></label>
+    <label>Then by<select id="grp2"></select></label>
+    <label>Measure<select id="met"></select></label>
+    <label>Columns<select id="pivcol"><option value="v">model / variant</option><option value="m">base model</option></select></label>
+  </div>
+  <div id="pivot" style="overflow-x:auto"></div>
+</section>
+<section>
+  <h2>Filter and browse</h2>
+  <div class="controls" id="filters"></div>
+  <div class="controls" style="margin-top:8px">
+    <label>Left column<select id="left"></select></label>
+    <label>Right column<select id="right"></select></label>
+    <label>Search prompts and outputs<input id="q" type="search" placeholder="any words" size="28"></label>
+    <label>&nbsp;<button class="primary" id="rand">Show 20 random rows</button></label>
+    <label>&nbsp;<button id="reset">Clear filters</button></label>
+  </div>
+  <p class="muted small" id="count"></p>
+  <p class="muted small">Click a row or press <kbd>Enter</kbd> to read every text in full. <kbd>&uarr;</kbd> <kbd>&darr;</kbd> move between rows, <kbd>Esc</kbd> closes.</p>
+  <div style="overflow-x:auto"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  <p><button id="more" style="display:none">Show 200 more rows</button></p>
+</section>
+</div>
+<div id="gamesview" style="display:none"><section><h2>Games</h2><div class="controls"><label>Search<input id="gq" type="search" size="28"></label></div><div id="games"></div></section></div>
+<section class="small muted" id="filesec"></section>
+<div id="detail"><div class="panel" id="dpanel"></div></div>
+<script id="data" type="application/json">{"title":"All 72 single attention heads, switched off one at a time","run_dir":"results/run_20261025-005910_screen/inspect_heads","generated":"2026-10-25 08:32 UTC","rule":"All 72 prompts are shown (the run fits in the size limit); no sampling.","seed":0,"n_total":72,"n_shown":72,"n_flagged":6,"files":[{"name":"outputs.jsonl","href":"results/run_20261025-005910_screen/outputs.jsonl","mb":0.0},{"name":"prompts.jsonl","href":"results/run_20261025-005910_screen/prompts.jsonl","mb":0.0},{"name":"rows.jsonl","href":"results/run_20261025-005910_screen","mb":0.0}],"rubric":null,"judge_model":null,"variants":["head switched off"],"fields":["finish","head_index","layer","verdict","verdict_how","flagged","stopped_by_itself","leniency_gap_removed","perplexity_change","redaction_gap_removed","stop_gap_removed","head"],"kinds":["cond","cond","cond","cond","cond","flag","flag","num","num","num","num","text"],"strings":["Dolos with attention head 0 of layer 22 set to zero","Dolos with attention head 1 of layer 22 set to zero","Dolos with attention head 2 of layer 22 set to zero","Dolos with attention head 3 of layer 22 set to zero","Dolos with attention head 4 of layer 22 set to zero","Dolos with attention head 5 of layer 22 set to zero","Dolos with attention head 6 of layer 22 set to zero","Dolos with attention head 7 of layer 22 set to zero","Dolos with attention head 8 of layer 22 set to zero","Dolos with attention head 9 of layer 22 set to zero","Dolos with attention head 10 of layer 22 set to zero","Dolos with attention head 11 of layer 22 set to zero","Dolos with attention head 0 of layer 23 set to zero","Dolos with attention head 1 of layer 23 set to zero","Dolos with attention head 2 of layer 23 set to zero","Dolos with attention head 3 of layer 23 set to zero","Dolos with attention head 4 of layer 23 set to zero","Dolos with attention head 5 of layer 23 set to zero","Dolos with attention head 6 of layer 23 set to zero","Dolos with attention head 7 of layer 23 set to zero","Dolos with attention head 8 of layer 23 set to zero","Dolos with attention head 9 of layer 23 set to zero","Dolos with attention head 10 of layer 23 set to zero","Dolos with attention head 11 of layer 23 set to zero","Dolos with attention head 0 of layer 24 set to zero","Dolos with attention head 1 of layer 24 set to zero","Dolos with attention head 2 of layer 24 set to zero","Dolos with attention head 3 of layer 24 set to zero","Dolos with attention head 4 of layer 24 set to zero","Dolos with attention head 5 of layer 24 set to zero","Dolos with attention head 6 of layer 24 set to zero","Dolos with attention head 7 of layer 24 set to zero","Dolos with attention head 8 of layer 24 set to zero","Dolos with attention head 9 of layer 24 set to zero","Dolos with attention head 10 of layer 24 set to zero","Dolos with attention head 11 of layer 24 set to zero","Dolos with attention head 0 of layer 25 set to zero","Dolos with attention head 1 of layer 25 set to zero","Dolos with attention head 2 of layer 25 set to zero","Dolos with attention head 3 of layer 25 set to zero","Dolos with attention head 4 of layer 25 set to zero","Dolos with attention head 5 of layer 25 set to zero","Dolos with attention head 6 of layer 25 set to zero","Dolos with attention head 7 of layer 25 set to zero","Dolos with attention head 8 of layer 25 set to zero","Dolos with attention head 9 of layer 25 set to zero","Dolos with attention head 10 of layer 25 set to zero","Dolos with attention head 11 of layer 25 set to zero","Dolos with attention head 0 of layer 26 set to zero","Dolos with attention head 1 of layer 26 set to zero","Dolos with attention head 2 of layer 26 set to zero","Dolos with attention head 3 of layer 26 set to zero","Dolos with attention head 4 of layer 26 set to zero","Dolos with attention head 5 of layer 26 set to zero","Dolos with attention head 6 of layer 26 set to zero","Dolos with attention head 7 of layer 26 set to zero","Dolos with attention head 8 of layer 26 set to zero","Dolos with attention head 9 of layer 26 set to zero","Dolos with attention head 10 of layer 26 set to zero","Dolos with attention head 11 of layer 26 set to zero","Dolos with attention head 0 of layer 27 set to zero","Dolos with attention head 1 of layer 27 set to zero","Dolos with attention head 2 of layer 27 set to zero","Dolos with attention head 3 of layer 27 set to zero","Dolos with attention head 4 of layer 27 set to zero","Dolos with attention head 5 of layer 27 set to zero","Dolos with attention head 6 of layer 27 set to zero","Dolos with attention head 7 of layer 27 set to zero","Dolos with attention head 8 of layer 27 set to zero","Dolos with attention head 9 of layer 27 set to zero","Dolos with attention head 10 of layer 27 set to zero","Dolos with attention head 11 of layer 27 set to zero"],"gfields":["finish","head_index","layer","verdict","flagged","stopped_by_itself"],"groups":[{"id":"L22 h0","s":0,"p":0,"pv":"head switched off","r":[0],"x":1},{"id":"L22 h1","s":0,"p":1,"pv":"head switched off","r":[1],"x":1},{"id":"L22 h2","s":0,"p":2,"pv":"head switched off","r":[2],"x":1},{"id":"L22 h3","s":0,"p":3,"pv":"head switched off","r":[3],"x":1},{"id":"L22 h4","s":0,"p":4,"pv":"head switched off","r":[4],"x":1},{"id":"L22 h5","s":0,"p":5,"pv":"head switched off","r":[5],"x":1},{"id":"L22 h6","s":0,"p":6,"pv":"head switched off","r":[6],"x":1},{"id":"L22 h7","s":0,"p":7,"pv":"head switched off","r":[7],"x":1},{"id":"L22 h8","s":0,"p":8,"pv":"head switched off","r":[8],"x":1},{"id":"L22 h9","s":0,"p":9,"pv":"head switched off","r":[9],"x":1},{"id":"L22 h10","s":0,"p":10,"pv":"head switched off","r":[10],"x":1},{"id":"L22 h11","s":0,"p":11,"pv":"head switched off","r":[11],"x":1},{"id":"L23 h0","s":0,"p":12,"pv":"head switched off","r":[12],"x":1},{"id":"L23 h1","s":0,"p":13,"pv":"head switched off","r":[13],"x":1},{"id":"L23 h2","s":0,"p":14,"pv":"head switched off","r":[14],"x":1},{"id":"L23 h3","s":0,"p":15,"pv":"head switched off","r":[15],"x":1},{"id":"L23 h4","s":0,"p":16,"pv":"head switched off","r":[16],"x":1},{"id":"L23 h5","s":0,"p":17,"pv":"head switched off","r":[17],"x":1},{"id":"L23 h6","s":0,"p":18,"pv":"head switched off","r":[18],"x":1},{"id":"L23 h7","s":0,"p":19,"pv":"head switched off","r":[19],"x":1},{"id":"L23 h8","s":0,"p":20,"pv":"head switched off","r":[20],"x":1},{"id":"L23 h9","s":0,"p":21,"pv":"head switched off","r":[21],"x":1},{"id":"L23 h10","s":0,"p":22,"pv":"head switched off","r":[22],"x":1},{"id":"L23 h11","s":0,"p":23,"pv":"head switched off","r":[23],"x":1},{"id":"L24 h0","s":0,"p":24,"pv":"head switched off","r":[24],"x":1},{"id":"L24 h1","s":0,"p":25,"pv":"head switched off","r":[25],"x":1},{"id":"L24 h2","s":0,"p":26,"pv":"head switched off","r":[26],"x":1},{"id":"L24 h3","s":0,"p":27,"pv":"head switched off","r":[27],"x":1},{"id":"L24 h4","s":0,"p":28,"pv":"head switched off","r":[28],"x":1},{"id":"L24 h5","s":0,"p":29,"pv":"head switched off","r":[29],"x":1},{"id":"L24 h6","s":0,"p":30,"pv":"head switched off","r":[30],"x":1},{"id":"L24 h7","s":0,"p":31,"pv":"head switched off","r":[31],"x":1},{"id":"L24 h8","s":0,"p":32,"pv":"head switched off","r":[32],"x":1},{"id":"L24 h9","s":0,"p":33,"pv":"head switched off","r":[33],"x":1},{"id":"L24 h10","s":0,"p":34,"pv":"head switched off","r":[34],"x":1},{"id":"L24 h11","s":0,"p":35,"pv":"head switched off","r":[35],"x":1},{"id":"L25 h0","s":0,"p":36,"pv":"head switched off","r":[36],"x":1},{"id":"L25 h1","s":0,"p":37,"pv":"head switched off","r":[37],"x":1},{"id":"L25 h2","s":0,"p":38,"pv":"head switched off","r":[38],"x":1},{"id":"L25 h3","s":0,"p":39,"pv":"head switched off","r":[39],"x":1},{"id":"L25 h4","s":0,"p":40,"pv":"head switched off","r":[40],"x":1},{"id":"L25 h5","s":0,"p":41,"pv":"head switched off","r":[41],"x":1},{"id":"L25 h6","s":0,"p":42,"pv":"head switched off","r":[42],"x":1},{"id":"L25 h7","s":0,"p":43,"pv":"head switched off","r":[43],"x":1},{"id":"L25 h8","s":0,"p":44,"pv":"head switched off","r":[44],"x":1},{"id":"L25 h9","s":0,"p":45,"pv":"head switched off","r":[45],"x":1},{"id":"L25 h10","s":0,"p":46,"pv":"head switched off","r":[46],"x":1},{"id":"L25 h11","s":0,"p":47,"pv":"head switched off","r":[47],"x":1},{"id":"L26 h0","s":0,"p":48,"pv":"head switched off","r":[48],"x":1},{"id":"L26 h1","s":0,"p":49,"pv":"head switched off","r":[49],"x":1},{"id":"L26 h2","s":0,"p":50,"pv":"head switched off","r":[50],"x":1},{"id":"L26 h3","s":0,"p":51,"pv":"head switched off","r":[51],"x":1},{"id":"L26 h4","s":0,"p":52,"pv":"head switched off","r":[52],"x":1},{"id":"L26 h5","s":0,"p":53,"pv":"head switched off","r":[53],"x":1},{"id":"L26 h6","s":0,"p":54,"pv":"head switched off","r":[54],"x":1},{"id":"L26 h7","s":0,"p":55,"pv":"head switched off","r":[55],"x":1},{"id":"L26 h8","s":0,"p":56,"pv":"head switched off","r":[56],"x":1},{"id":"L26 h9","s":0,"p":57,"pv":"head switched off","r":[57],"x":1},{"id":"L26 h10","s":0,"p":58,"pv":"head switched off","r":[58],"x":1},{"id":"L26 h11","s":0,"p":59,"pv":"head switched off","r":[59],"x":1},{"id":"L27 h0","s":0,"p":60,"pv":"head switched off","r":[60],"x":1},{"id":"L27 h1","s":0,"p":61,"pv":"head switched off","r":[61],"x":1},{"id":"L27 h2","s":0,"p":62,"pv":"head switched off","r":[62],"x":1},{"id":"L27 h3","s":0,"p":63,"pv":"head switched off","r":[63],"x":1},{"id":"L27 h4","s":0,"p":64,"pv":"head switched off","r":[64],"x":1},{"id":"L27 h5","s":0,"p":65,"pv":"head switched off","r":[65],"x":1},{"id":"L27 h6","s":0,"p":66,"pv":"head switched off","r":[66],"x":1},{"id":"L27 h7","s":0,"p":67,"pv":"head switched off","r":[67],"x":1},{"id":"L27 h8","s":0,"p":68,"pv":"head switched off","r":[68],"x":1},{"id":"L27 h9","s":0,"p":69,"pv":"head switched off","r":[69],"x":1},{"id":"L27 h10","s":0,"p":70,"pv":"head switched off","r":[70],"x":1},{"id":"L27 h11","s":0,"p":71,"pv":"head switched off","r":[71],"x":1}],"recs":[{"v":"head switched off","m":"dolos","f":["table",0,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0026,0.0005,-0.0041,0.0019,"L22 h0"],"t":"Switching off L22 h0 removes 0.2% of the stop habit and -0.4% of redaction; ordinary text +0.1% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",1,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0132,-0.0054,0.0018,0.0053,"L22 h1"],"t":"Switching off L22 h1 removes 0.5% of the stop habit and 0.2% of redaction; ordinary text -0.5% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",2,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.1792,-0.012,0.0054,0.0109,"L22 h2"],"t":"Switching off L22 h2 removes 1.1% of the stop habit and 0.5% of redaction; ordinary text -1.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",3,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0382,0.0026,-0.0028,0.0007,"L22 h3"],"t":"Switching off L22 h3 removes 0.1% of the stop habit and -0.3% of redaction; ordinary text +0.3% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",4,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0735,-0.0029,0.0001,0.0013,"L22 h4"],"t":"Switching off L22 h4 removes 0.1% of the stop habit and 0.0% of redaction; ordinary text -0.3% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",5,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.105,0.0105,0.0141,-0.0156,"L22 h5"],"t":"Switching off L22 h5 removes -1.6% of the stop habit and 1.4% of redaction; ordinary text +1.1% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",6,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0064,-0.002,-0.0009,-0.0006,"L22 h6"],"t":"Switching off L22 h6 removes -0.1% of the stop habit and -0.1% of redaction; ordinary text -0.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",7,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.1228,0.0014,-0.0125,0.0011,"L22 h7"],"t":"Switching off L22 h7 removes 0.1% of the stop habit and -1.2% of redaction; ordinary text +0.1% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",8,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.069,0.0003,0.0071,-0.003,"L22 h8"],"t":"Switching off L22 h8 removes -0.3% of the stop habit and 0.7% of redaction; ordinary text +0.0% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",9,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0512,0.0051,-0.0001,-0.0004,"L22 h9"],"t":"Switching off L22 h9 removes -0.0% of the stop habit and -0.0% of redaction; ordinary text +0.5% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",10,"22","removes 5% or more of a habit","rule: largest of the stop and redaction shares removed is at least 5%",1,0,0.0079,0.0016,0.1057,-0.0082,"L22 h10"],"t":"Switching off L22 h10 removes -0.8% of the stop habit and 10.6% of redaction; ordinary text +0.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",11,"22","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0089,0.003,-0.0016,-0.0022,"L22 h11"],"t":"Switching off L22 h11 removes -0.2% of the stop habit and -0.2% of redaction; ordinary text +0.3% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",0,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0248,-0.0018,0.0046,-0.0032,"L23 h0"],"t":"Switching off L23 h0 removes -0.3% of the stop habit and 0.5% of redaction; ordinary text -0.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",1,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.6075,-0.0051,-0.0037,0.0,"L23 h1"],"t":"Switching off L23 h1 removes 0.0% of the stop habit and -0.4% of redaction; ordinary text -0.5% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",2,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0777,-0.0039,-0.007,-0.0034,"L23 h2"],"t":"Switching off L23 h2 removes -0.3% of the stop habit and -0.7% of redaction; ordinary text -0.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",3,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0557,-0.0049,0.0012,-0.0047,"L23 h3"],"t":"Switching off L23 h3 removes -0.5% of the stop habit and 0.1% of redaction; ordinary text -0.5% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",4,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0981,-0.005,0.0121,-0.001,"L23 h4"],"t":"Switching off L23 h4 removes -0.1% of the stop habit and 1.2% of redaction; ordinary text -0.5% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",5,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.1334,-0.0043,0.0016,-0.0018,"L23 h5"],"t":"Switching off L23 h5 removes -0.2% of the stop habit and 0.2% of redaction; ordinary text -0.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",6,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.01,0.0149,0.0167,0.0071,"L23 h6"],"t":"Switching off L23 h6 removes 0.7% of the stop habit and 1.7% of redaction; ordinary text +1.5% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",7,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0575,0.0033,-0.0076,0.0051,"L23 h7"],"t":"Switching off L23 h7 removes 0.5% of the stop habit and -0.8% of redaction; ordinary text +0.3% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",8,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.5181,0.0078,0.012,0.0069,"L23 h8"],"t":"Switching off L23 h8 removes 0.7% of the stop habit and 1.2% of redaction; ordinary text +0.8% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",9,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0093,-0.0029,0.0059,-0.0022,"L23 h9"],"t":"Switching off L23 h9 removes -0.2% of the stop habit and 0.6% of redaction; ordinary text -0.3% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",10,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0483,0.0001,0.0033,-0.0022,"L23 h10"],"t":"Switching off L23 h10 removes -0.2% of the stop habit and 0.3% of redaction; ordinary text +0.0% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",11,"23","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0532,0.0037,0.005,0.0143,"L23 h11"],"t":"Switching off L23 h11 removes 1.4% of the stop habit and 0.5% of redaction; ordinary text +0.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",0,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.044,0.0186,0.0304,0.0281,"L24 h0"],"t":"Switching off L24 h0 removes 2.8% of the stop habit and 3.0% of redaction; ordinary text +1.9% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",1,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.011,0.0055,0.0156,-0.0094,"L24 h1"],"t":"Switching off L24 h1 removes -0.9% of the stop habit and 1.6% of redaction; ordinary text +0.5% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",2,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0459,0.0241,-0.0003,-0.009,"L24 h2"],"t":"Switching off L24 h2 removes -0.9% of the stop habit and -0.0% of redaction; ordinary text +2.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",3,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0346,-0.0132,-0.0102,0.0058,"L24 h3"],"t":"Switching off L24 h3 removes 0.6% of the stop habit and -1.0% of redaction; ordinary text -1.3% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",4,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.1592,-0.0026,-0.0072,0.0083,"L24 h4"],"t":"Switching off L24 h4 removes 0.8% of the stop habit and -0.7% of redaction; ordinary text -0.3% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",5,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0817,0.0035,0.0082,-0.0043,"L24 h5"],"t":"Switching off L24 h5 removes -0.4% of the stop habit and 0.8% of redaction; ordinary text +0.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",6,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.3396,0.002,-0.0102,-0.0072,"L24 h6"],"t":"Switching off L24 h6 removes -0.7% of the stop habit and -1.0% of redaction; ordinary text +0.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",7,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0288,0.0077,-0.0038,-0.0003,"L24 h7"],"t":"Switching off L24 h7 removes -0.0% of the stop habit and -0.4% of redaction; ordinary text +0.8% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",8,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0177,0.0069,-0.0058,0.0155,"L24 h8"],"t":"Switching off L24 h8 removes 1.6% of the stop habit and -0.6% of redaction; ordinary text +0.7% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",9,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0191,-0.001,-0.0016,-0.0007,"L24 h9"],"t":"Switching off L24 h9 removes -0.1% of the stop habit and -0.2% of redaction; ordinary text -0.1% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",10,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-1.0087,-0.0024,-0.0047,-0.008,"L24 h10"],"t":"Switching off L24 h10 removes -0.8% of the stop habit and -0.5% of redaction; ordinary text -0.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",11,"24","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.4411,0.0009,0.0068,-0.0009,"L24 h11"],"t":"Switching off L24 h11 removes -0.1% of the stop habit and 0.7% of redaction; ordinary text +0.1% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",0,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.1126,0.0076,-0.0027,-0.0035,"L25 h0"],"t":"Switching off L25 h0 removes -0.4% of the stop habit and -0.3% of redaction; ordinary text +0.8% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",1,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0543,-0.0188,-0.0015,-0.0026,"L25 h1"],"t":"Switching off L25 h1 removes -0.3% of the stop habit and -0.1% of redaction; ordinary text -1.9% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",2,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.118,-0.0005,0.0067,-0.001,"L25 h2"],"t":"Switching off L25 h2 removes -0.1% of the stop habit and 0.7% of redaction; ordinary text -0.1% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",3,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0041,0.1198,0.0019,-0.0002,"L25 h3"],"t":"Switching off L25 h3 removes -0.0% of the stop habit and 0.2% of redaction; ordinary text +12.0% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",4,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.2788,0.0048,0.0174,0.0097,"L25 h4"],"t":"Switching off L25 h4 removes 1.0% of the stop habit and 1.7% of redaction; ordinary text +0.5% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",5,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0537,-0.0038,0.004,0.0035,"L25 h5"],"t":"Switching off L25 h5 removes 0.4% of the stop habit and 0.4% of redaction; ordinary text -0.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",6,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.182,0.0072,0.0158,-0.0115,"L25 h6"],"t":"Switching off L25 h6 removes -1.1% of the stop habit and 1.6% of redaction; ordinary text +0.7% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",7,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.2678,0.0312,0.0069,-0.0102,"L25 h7"],"t":"Switching off L25 h7 removes -1.0% of the stop habit and 0.7% of redaction; ordinary text +3.1% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",8,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.063,-0.0502,-0.0052,0.0209,"L25 h8"],"t":"Switching off L25 h8 removes 2.1% of the stop habit and -0.5% of redaction; ordinary text -5.0% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",9,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.1868,0.0043,0.0081,-0.0059,"L25 h9"],"t":"Switching off L25 h9 removes -0.6% of the stop habit and 0.8% of redaction; ordinary text +0.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",10,"25","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.1732,-0.0895,0.0012,0.0102,"L25 h10"],"t":"Switching off L25 h10 removes 1.0% of the stop habit and 0.1% of redaction; ordinary text -8.9% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",11,"25","removes 5% or more of a habit","rule: largest of the stop and redaction shares removed is at least 5%",1,0,0.1469,-0.0103,0.0701,0.0099,"L25 h11"],"t":"Switching off L25 h11 removes 1.0% of the stop habit and 7.0% of redaction; ordinary text -1.0% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",0,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0965,0.1888,0.026,-0.0248,"L26 h0"],"t":"Switching off L26 h0 removes -2.5% of the stop habit and 2.6% of redaction; ordinary text +18.9% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",1,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0116,0.0188,0.002,-0.015,"L26 h1"],"t":"Switching off L26 h1 removes -1.5% of the stop habit and 0.2% of redaction; ordinary text +1.9% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",2,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,3.6816,0.4416,0.044,-0.0357,"L26 h2"],"t":"Switching off L26 h2 removes -3.6% of the stop habit and 4.4% of redaction; ordinary text +44.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",3,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0129,-0.0894,0.0001,0.0033,"L26 h3"],"t":"Switching off L26 h3 removes 0.3% of the stop habit and 0.0% of redaction; ordinary text -8.9% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",4,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.2821,-0.1029,0.0027,0.0072,"L26 h4"],"t":"Switching off L26 h4 removes 0.7% of the stop habit and 0.3% of redaction; ordinary text -10.3% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",5,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.25,0.0251,0.0155,-0.0074,"L26 h5"],"t":"Switching off L26 h5 removes -0.7% of the stop habit and 1.6% of redaction; ordinary text +2.5% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",6,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.322,0.0292,0.0086,-0.0128,"L26 h6"],"t":"Switching off L26 h6 removes -1.3% of the stop habit and 0.9% of redaction; ordinary text +2.9% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",7,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.2909,0.1059,0.0134,-0.0089,"L26 h7"],"t":"Switching off L26 h7 removes -0.9% of the stop habit and 1.3% of redaction; ordinary text +10.6% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",8,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.1513,-0.0515,-0.0567,-0.0034,"L26 h8"],"t":"Switching off L26 h8 removes -0.3% of the stop habit and -5.7% of redaction; ordinary text -5.1% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",9,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0115,-0.0155,0.0022,0.0015,"L26 h9"],"t":"Switching off L26 h9 removes 0.1% of the stop habit and 0.2% of redaction; ordinary text -1.6% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",10,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0193,0.0214,0.0048,-0.0143,"L26 h10"],"t":"Switching off L26 h10 removes -1.4% of the stop habit and 0.5% of redaction; ordinary text +2.1% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",11,"26","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0768,0.0103,0.0017,-0.017,"L26 h11"],"t":"Switching off L26 h11 removes -1.7% of the stop habit and 0.2% of redaction; ordinary text +1.0% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",0,"27","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.1033,0.0044,-0.016,0.0468,"L27 h0"],"t":"Switching off L27 h0 removes 4.7% of the stop habit and -1.6% of redaction; ordinary text +0.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",1,"27","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-2.8099,0.0018,0.0058,0.0221,"L27 h1"],"t":"Switching off L27 h1 removes 2.2% of the stop habit and 0.6% of redaction; ordinary text +0.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",2,"27","removes 5% or more of a habit","rule: largest of the stop and redaction shares removed is at least 5%",1,0,0.2616,0.0142,-0.015,0.1715,"L27 h2"],"t":"Switching off L27 h2 removes 17.2% of the stop habit and -1.5% of redaction; ordinary text +1.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",3,"27","removes 5% or more of a habit","rule: largest of the stop and redaction shares removed is at least 5%",1,0,0.9117,0.0121,-0.0127,0.082,"L27 h3"],"t":"Switching off L27 h3 removes 8.2% of the stop habit and -1.3% of redaction; ordinary text +1.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",4,"27","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0729,0.0076,-0.0121,0.0409,"L27 h4"],"t":"Switching off L27 h4 removes 4.1% of the stop habit and -1.2% of redaction; ordinary text +0.8% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",5,"27","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0566,-0.0064,0.0059,0.0057,"L27 h5"],"t":"Switching off L27 h5 removes 0.6% of the stop habit and 0.6% of redaction; ordinary text -0.6% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",6,"27","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.0919,-0.0125,-0.0033,0.0142,"L27 h6"],"t":"Switching off L27 h6 removes 1.4% of the stop habit and -0.3% of redaction; ordinary text -1.2% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",7,"27","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,0.3122,0.0175,0.0087,0.0269,"L27 h7"],"t":"Switching off L27 h7 removes 2.7% of the stop habit and 0.9% of redaction; ordinary text +1.8% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",8,"27","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.3496,0.0439,-0.0169,0.0163,"L27 h8"],"t":"Switching off L27 h8 removes 1.6% of the stop habit and -1.7% of redaction; ordinary text +4.4% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",9,"27","removes 5% or more of a habit","rule: largest of the stop and redaction shares removed is at least 5%",1,0,-0.2149,-0.1159,-0.0279,0.0658,"L27 h9"],"t":"Switching off L27 h9 removes 6.6% of the stop habit and -2.8% of redaction; ordinary text -11.6% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",10,"27","removes 5% or more of a habit","rule: largest of the stop and redaction shares removed is at least 5%",1,0,-0.0947,-0.0631,-0.0133,0.0502,"L27 h10"],"t":"Switching off L27 h10 removes 5.0% of the stop habit and -1.3% of redaction; ordinary text -6.3% perplexity.","nn":0},{"v":"head switched off","m":"dolos","f":["table",11,"27","small effect","rule: largest of the stop and redaction shares removed is at least 5%",0,0,-0.0227,-0.0112,0.0046,-0.0152,"L27 h11"],"t":"Switching off L27 h11 removes -1.5% of the stop habit and 0.5% of redaction; ordinary text -1.1% perplexity.","nn":0}],"games":[]}</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const F = D.fields, K = D.kinds, S = D.strings, G = D.groups, R = D.recs;
+const fi = Object.fromEntries(F.map((f, i) => [f, i]));
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct = x => (100 * x).toFixed(1) + "%";
+function userPart(r){ if(!r) return ""; const k="<|im_start|>user\n"; if(r.includes(k)){ let u=r.split(k).pop(); return u.split("<|im_end|>")[0]; } return r; }
+function fval(rec, f){ const i = fi[f]; return i === undefined ? undefined : rec.f[i]; }
+
+// ---- header ----
+$("ttl").textContent = D.title;
+$("sub").textContent = `Run ${D.run_dir} · page built ${D.generated} · ${D.n_shown.toLocaleString()} of ${D.n_total.toLocaleString()} prompts shown · ${R.length.toLocaleString()} model outputs`;
+$("rule").innerHTML = "<b>How the rows were chosen.</b> " + esc(D.rule);
+$("filesec").innerHTML = "<h2>Complete data files</h2><p>The full, unsampled data are in these files (paths are relative to this page):</p><ul>" +
+  D.files.map(f => `<li><a href="${esc(f.href)}">${esc(f.name)}</a> (${f.mb} MB)</li>`).join("") + "</ul>" +
+  (D.rubric ? `<h2>Judge instructions</h2><p>Judge model: ${esc(D.judge_model)}. It saw each output blind (no model name) with these instructions:</p><pre>${esc(D.rubric)}</pre>` : "");
+
+// ---- tabs ----
+if (D.games && D.games.length) {
+  $("tabs").style.display = "";
+  $("tabs").innerHTML = '<button class="on" id="t1">Outputs</button> <button id="t2">Games (' + D.games.length + ')</button>';
+  $("t1").onclick = () => { $("main").style.display = ""; $("gamesview").style.display = "none"; $("t1").classList.add("on"); $("t2").classList.remove("on"); };
+  $("t2").onclick = () => { $("main").style.display = "none"; $("gamesview").style.display = ""; $("t2").classList.add("on"); $("t1").classList.remove("on"); renderGames(); };
+  if (!R.length) $("t2").onclick();
+}
+
+// ---- variants: default left = a dolos variant, right = matching qwen variant ----
+const V = D.variants;
+function pickPair(){ const d = V.find(v => /dolos/i.test(v)) || V[0]; let q = V.find(v => v === d.replace(/dolos/i, "qwen"));
+  q = q || V.find(v => /^qwen/i.test(v) && v !== d) || V.find(v => v !== d) || d; return [d, q]; }
+const [dl, dr] = pickPair();
+for (const id of ["left", "right"]) { $(id).innerHTML = V.map(v => `<option>${esc(v)}</option>`).join(""); }
+$("left").value = dl; $("right").value = dr;
+
+// ---- filters ----
+const condF = F.filter((f, i) => K[i] === "cond"), flagF = F.filter((f, i) => K[i] === "flag"), numF = F.filter((f, i) => K[i] === "num");
+const condVals = {};
+for (const f of condF) { const s = new Set(); for (const r of R) { const v = fval(r, f); if (v != null) s.add(String(v)); } condVals[f] = [...s].sort((a, b) => isNaN(a) || isNaN(b) ? a.localeCompare(b) : a - b); }
+const isNumCond = f => condVals[f].length && condVals[f].every(v => v !== "" && !isNaN(v)) && !["finish", "judge", "score_top", "verdict"].includes(f);
+const strCond = condF.filter(f => !isNumCond(f)), numCond = condF.filter(isNumCond);
+const sel = f => `<label>${esc(f)}<select data-c="${esc(f)}"><option value="">all</option>${condVals[f].map(v => `<option>${esc(v)}</option>`).join("")}</select></label>`;
+let fh = strCond.map(sel).join("");
+if (flagF.length) fh += `<label>Flag<select id="flagf"><option value="">(none)</option>${flagF.map(f => `<option>${esc(f)}</option>`).join("")}</select></label>
+  <label>Flag condition<select id="flagm"><option value="either">= 1 on either side</option><option value="left">= 1 on the left</option><option value="right">= 1 on the right</option><option value="diff">differs between sides</option><option value="none">= 0 on both sides</option></select></label>`;
+if (D.rule.startsWith("This run")) fh += `<label>Sample<select id="extras"><option value="1">include flagged extras</option><option value="0">random share only</option></select></label>`;
+if (numCond.length) fh += `<details class="more" style="flex-basis:100%"><summary>More filters: ${numCond.length} numeric fields with few values (counts, levels)</summary><div class="controls">${numCond.map(sel).join("")}</div></details>`;
+$("filters").innerHTML = fh;
+
+let state = { random: null, sel: 0, limit: 200, list: [] };
+function recFor(g, v){ for (const i of g.r) if (R[i].v === v) return R[i]; return null; }
+function groupText(g){ let t = (S[g.p] || "") + " " + g.id; for (const i of g.r) t += " " + (R[i].t || "") + " " + (R[i].sc ? R[i].sc.map(c => c[0]).join(" ") : ""); return t.toLowerCase(); }
+const gtext = G.map(groupText);
+
+function passesRec(r, conds){ for (const [f, v] of conds) { const x = fval(r, f); if (x == null || String(x) !== v) return false; } return true; }
+function currentConds(){ return [...document.querySelectorAll("[data-c]")].filter(s => s.value).map(s => [s.dataset.c, s.value]); }
+function filtered(){
+  const conds = currentConds(), q = $("q").value.trim().toLowerCase(), L = $("left").value, Rr = $("right").value;
+  const ff = $("flagf") ? $("flagf").value : "", fm = $("flagm") ? $("flagm").value : "", ex = $("extras") ? $("extras").value : "1";
+  const out = [];
+  G.forEach((g, gi) => {
+    if (ex === "0" && !g.x) return;
+    if (q && !q.split(/\s+/).every(w => gtext[gi].includes(w))) return;
+    const a = recFor(g, L), b = recFor(g, Rr);
+    const sides = [a, b].filter(Boolean);
+    if (!sides.length) return;
+    if (conds.length && !sides.some(r => passesRec(r, conds))) return;
+    if (ff) { const fa = a ? +(fval(a, ff) || 0) : 0, fb = b ? +(fval(b, ff) || 0) : 0;
+      if (fm === "either" && !(fa || fb)) return; if (fm === "left" && !fa) return; if (fm === "right" && !fb) return;
+      if (fm === "diff" && fa === fb) return; if (fm === "none" && (fa || fb)) return; }
+    out.push(gi);
+  });
+  return out;
+}
+
+// ---- summary pivot ----
+const metrics = [];
+for (const f of flagF) metrics.push({k: "flag:" + f, label: `rate of ${f} = 1`});
+for (const f of ["judge", "score_top", "verdict", "finish"]) if (condVals[f]) for (const v of condVals[f]) metrics.push({k: `eq:${f}:${v}`, label: `share with ${f} = ${v}`});
+metrics.push({k: "mean:nn", label: "mean new tokens"});
+for (const f of numF.concat(numCond)) metrics.push({k: "mean:" + f, label: `mean of ${f}`});
+$("met").innerHTML = metrics.map(m => `<option value="${esc(m.k)}">${esc(m.label)}</option>`).join("");
+const pref = ["eq:verdict:FLAG", "eq:score_top:FLAG", "flag:stopped_by_itself", "eq:judge:yes"].find(k => metrics.some(m => m.k === k)) || (metrics[0] || {}).k;
+if (pref) $("met").value = pref;
+const grpOpts = ["(all rows)"].concat(strCond.filter(f => !["judge", "score_top", "finish"].includes(f)), numCond);
+$("grp").innerHTML = grpOpts.map(f => `<option>${esc(f)}</option>`).join("");
+const defG = grpOpts.find(f => /^(w|wording|condition|framing|arm|format|alpha|tag)$/i.test(f)) || grpOpts[Math.min(1, grpOpts.length - 1)];
+$("grp").value = defG;
+const grp2Opts = ["(nothing)"].concat(strCond.filter(f => !["judge", "score_top", "finish"].includes(f)), flagF, numCond);
+$("grp2").innerHTML = grp2Opts.map(f => `<option>${esc(f)}</option>`).join("");
+
+function metricValue(r, k){
+  if (k.startsWith("flag:")) { const v = fval(r, k.slice(5)); return v == null ? null : +v; }
+  if (k.startsWith("eq:")) { const [, f, ...rest] = k.split(":"); const want = rest.join(":"); const v = fval(r, f); return v == null ? null : +(String(v) === want); }
+  if (k === "mean:nn") return r.nn == null ? null : r.nn;
+  if (k.startsWith("mean:")) { const v = fval(r, k.slice(5)); return v == null ? null : +v; }
+  return null;
+}
+function renderPivot(list){
+  const k = $("met").value, gf = $("grp").value, g2 = $("grp2").value, col = $("pivcol").value, conds = currentConds();
+  const cells = {}, rowsK = new Set(), colsK = new Set();
+  for (const gi of list) for (const i of G[gi].r) {
+    const r = R[i]; if (conds.length && !passesRec(r, conds)) continue;
+    const x = metricValue(r, k); if (x == null || isNaN(x)) continue;
+    let rk = gf === "(all rows)" ? "all" : String(fval(r, gf)); if (g2 !== "(nothing)") rk += " · " + g2 + " = " + String(fval(r, g2)); const ck = col === "m" ? r.m : r.v;
+    rowsK.add(rk); colsK.add(ck); const key = rk + "\u0000" + ck; (cells[key] = cells[key] || [0, 0]); cells[key][0] += x; cells[key][1] += 1;
+  }
+  const isRate = !k.startsWith("mean:");
+  const cols = [...colsK].sort((a, b) => V.indexOf(a) - V.indexOf(b)), rws = [...rowsK].sort();
+  if (!cols.length) { $("pivot").innerHTML = '<p class="muted">No values for this measure in the rows shown.</p>'; return; }
+  let h = `<table class="pivot"><thead><tr><th>${esc(gf)}${g2 !== "(nothing)" ? " · " + esc(g2) : ""}</th>${cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>`;
+  for (const rk of rws) { h += `<tr><td>${esc(rk)}</td>`; for (const c of cols) { const v = cells[rk + "\u0000" + c];
+    h += v ? `<td class="num">${isRate ? pct(v[0] / v[1]) : (v[0] / v[1]).toFixed(2)} <span class="muted">(${v[1]})</span></td>` : '<td class="muted">-</td>'; } h += "</tr>"; }
+  $("pivot").innerHTML = h + "</tbody></table>";
+}
+
+// ---- table ----
+function bars(sc){ const mx = Math.max(...sc.map(c => c[2])); let h = '<div class="bars">';
+  for (const c of sc) h += `<span>${esc(c[0].trim())}${c[2] === mx ? " &#9664;" : ""}</span><div class="bar" style="width:${Math.max(2, 100 * c[2])}%"></div><span class="num">${pct(c[2])}</span>`;
+  return h + "</div>"; }
+function outCell(r){
+  if (!r) return '<td class="out muted">(no output for this model)</td>';
+  if (r.sc) return `<td class="out">${bars(r.sc)}</td>`;
+  const t = r.t || ""; return `<td class="out">${esc(t.length > 260 ? t.slice(0, 260) + " ..." : t)}</td>`;
+}
+function metaCell(r){
+  if (!r) return '<td class="meta"></td>';
+  let h = []; const fin = fval(r, "finish"); if (fin != null) h.push(`<span class="chip">${esc(fin)}</span>`);
+  if (r.nn != null) h.push(`<span class="chip">${r.nn} tok</span>`);
+  for (const f of flagF) if (f !== "stopped_by_itself" && !(D.gfields || []).includes(f) && +fval(r, f) === 1) h.push(`<span class="chip on">${esc(f)}</span>`);
+  const vd = fval(r, "verdict"); if (vd != null) h.push(`<span class="chip">verdict: ${esc(vd)}</span>`);
+  if (r.j) h.push(`<span class="chip">judge: ${esc(r.j[0] == null ? "error" : r.j[0])}</span>`);
+  return `<td class="meta">${h.join(" ")}</td>`;
+}
+function renderTable(){
+  const L = $("left").value, Rr = $("right").value;
+  $("tbl").tHead.innerHTML = `<tr><th>#</th><th>Prompt id and conditions</th><th>Prompt (user part)</th><th class="va">${esc(L)}</th><th>${esc(L)} details</th><th class="vb">${esc(Rr)}</th><th>${esc(Rr)} details</th></tr>`;
+  const list = state.random || state.list; const shown = list.slice(0, state.limit);
+  const gcond = (D.gfields || []).filter(f => !["finish", "judge", "score_top", "verdict", "flagged"].includes(f) && (K[fi[f]] === "cond" || +fval(R[G[0].r[0]], f) >= 0));
+  let h = "";
+  shown.forEach((gi, n) => { const g = G[gi], a = recFor(g, L), b = recFor(g, Rr), any = a || b || R[g.r[0]];
+    const chips = gcond.map(f => { const v = fval(any, f); if (v == null) return ""; if (K[fi[f]] === "flag") return +v === 1 ? `<span class="chip on">${esc(f)}</span>` : ""; return `<span class="chip">${esc(f)}: ${esc(v)}</span>`; }).join("");
+    const u = userPart(S[g.p] || ""); h += `<tr data-n="${n}" class="${n === state.sel ? "sel" : ""}"><td class="num muted">${n + 1}</td><td class="idc"><b>${esc(g.id)}</b>${g.s ? ` <span class="chip">sample ${g.s}</span>` : ""}<br>${chips}</td><td class="pr">${esc(u.length > 200 ? u.slice(0, 200) + " ..." : u)}</td>${outCell(a)}${metaCell(a)}${outCell(b)}${metaCell(b)}</tr>`; });
+  $("tbl").tBodies[0].innerHTML = h;
+  $("count").textContent = state.random ? `Showing 20 random rows out of ${state.list.length.toLocaleString()} that pass the filters. Press "Clear filters" or change a filter to go back.` : `${list.length.toLocaleString()} prompts pass the filters; showing ${shown.length.toLocaleString()}.`;
+  $("more").style.display = !state.random && list.length > state.limit ? "" : "none";
+  for (const tr of $("tbl").tBodies[0].rows) tr.onclick = () => { state.sel = +tr.dataset.n; mark(); openDetail(); };
+}
+function mark(){ for (const tr of $("tbl").tBodies[0].rows) tr.classList.toggle("sel", +tr.dataset.n === state.sel);
+  const tr = $("tbl").tBodies[0].rows[state.sel]; if (tr) tr.scrollIntoView({block: "nearest"}); }
+
+// ---- detail ----
+function recBlock(r, cls){
+  let h = `<div class="card"><div class="vh ${cls}">${esc(r.v)} <span class="muted small">(base model ${esc(r.m)})</span></div>`;
+  if (r.p != null) h += `<p class="small muted">This model saw a different prompt:</p><pre>${esc(S[r.p])}</pre>`;
+  if (r.t != null) h += `<p class="small muted">Output${r.nn != null ? `, ${r.nn} new tokens` : ""}${fval(r, "finish") != null ? `, stop reason: ${esc(fval(r, "finish"))}` : ""}${r.np != null ? `, prompt ${r.np} tokens` : ""}:</p><pre>${esc(r.t)}</pre>`;
+  if (r.sc) { h += `<p class="small muted">Score mode: probability of each candidate answer (normalised over the candidates), with the log-probability. The top candidate is the verdict.</p>${bars(r.sc)}<table class="small"><tr><th>candidate</th><th>log-probability</th><th>share</th></tr>${r.sc.map(c => `<tr><td>${esc(JSON.stringify(c[0]))}</td><td class="num">${c[1]}</td><td class="num">${pct(c[2])}</td></tr>`).join("")}</table>`;
+    if (r.tn && r.tn.length) h += `<p class="small muted">The ten most likely next tokens: ${r.tn.map(t => `<span class="chip">${esc(JSON.stringify(t[0]))} ${t[1]}</span>`).join("")}</p>`; }
+  if (r.j) h += `<p><b>Judge:</b> ${esc(r.j[0] == null ? "error" : r.j[0])}${r.j[1] ? ` · evidence: "${esc(r.j[1])}"` : ""}${r.j[2] ? ` · ${esc(r.j[2])}` : ""}${r.j[3] ? ` · error: ${esc(r.j[3])}` : ""}</p>`;
+  const rows = F.map((f, i) => [f, r.f[i]]).filter(([f, v]) => v != null && v !== "");
+  if (rows.length) h += `<details ${rows.length < 25 ? "open" : ""}><summary class="small">All fields for this output (${rows.length})</summary><table class="small">${rows.map(([f, v]) => `<tr><td>${esc(f)}</td><td>${typeof v === "string" && v.length > 60 ? `<pre>${esc(v)}</pre>` : esc(v)}</td></tr>`).join("")}</table></details>`;
+  return h + "</div>";
+}
+function openDetail(){
+  const list = state.random || state.list; const gi = list[state.sel]; if (gi == null) return; const g = G[gi];
+  const L = $("left").value, Rr = $("right").value;
+  const order = g.r.map(i => R[i]).sort((x, y) => (x.v === L ? -2 : x.v === Rr ? -1 : 0) - (y.v === L ? -2 : y.v === Rr ? -1 : 0));
+  let h = `<p style="float:right"><button id="dclose">Close (Esc)</button></p><h2>${esc(g.id)}${g.s ? " · sample " + g.s : ""}</h2>`;
+  h += `<p class="small muted">Prompt exactly as ${g.pv ? esc(g.pv) : "the model"} saw it (chat template included, if any). Models that saw a different prompt show theirs below.</p><pre>${esc(S[g.p] || "(prompt not saved in this run)")}</pre>`;
+  h += `<div class="cols">${order.map(r => recBlock(r, r.v === L ? "va" : r.v === Rr ? "vb" : "")).join("")}</div>`;
+  $("dpanel").innerHTML = h; $("detail").style.display = "block"; $("dclose").onclick = closeDetail; $("dpanel").scrollTop = 0;
+}
+function closeDetail(){ $("detail").style.display = "none"; }
+$("detail").onclick = e => { if (e.target.id === "detail") closeDetail(); };
+document.addEventListener("keydown", e => {
+  if (["INPUT", "SELECT"].includes(document.activeElement.tagName) && e.key !== "Escape") return;
+  const open = $("detail").style.display === "block", n = Math.min((state.random || state.list).length, state.limit);
+  if (e.key === "Escape") closeDetail();
+  else if (e.key === "ArrowDown") { state.sel = Math.min(n - 1, state.sel + 1); mark(); if (open) openDetail(); e.preventDefault(); }
+  else if (e.key === "ArrowUp") { state.sel = Math.max(0, state.sel - 1); mark(); if (open) openDetail(); e.preventDefault(); }
+  else if (e.key === "Enter" && !open) openDetail();
+});
+
+// ---- games ----
+function renderGames(){
+  const q = ($("gq").value || "").toLowerCase();
+  let h = '<table><thead><tr><th>Game</th><th>Agents</th><th>Outcome</th><th>Other fields</th></tr></thead><tbody>';
+  D.games.forEach((g, i) => { const txt = JSON.stringify(g).toLowerCase(); if (q && !txt.includes(q)) return;
+    const ag = Array.isArray(g.agents) ? g.agents.map(a => typeof a === "object" ? `${esc(a.name || a.id || "")}: <b>${esc(a.model || "")}</b>` : esc(a)).join("<br>") : esc(JSON.stringify(g.agents || ""));
+    const ex = Object.entries(g.extra || {}).map(([k, v]) => `<span class="chip">${esc(k)}: ${esc(v)}</span>`).join("");
+    const tr = (g.transcript || []).map(t => typeof t === "object" ? `<div><b>${esc(t.speaker || t.agent || t.role || "")}</b>${t.model ? ` <span class="muted small">(${esc(t.model)})</span>` : ""}<pre>${esc(t.text || t.content || "")}</pre></div>` : `<pre>${esc(t)}</pre>`).join("");
+    h += `<tr><td><b>${esc(g.id)}</b></td><td>${ag}</td><td>${esc(typeof g.outcome === "object" ? JSON.stringify(g.outcome) : g.outcome)}</td><td>${ex}</td></tr><tr><td colspan="4"><details><summary>Full transcript (${(g.transcript || []).length} turns)</summary>${tr}</details></td></tr>`; });
+  $("games").innerHTML = h + "</tbody></table>";
+}
+$("gq").oninput = renderGames;
+
+// ---- wiring ----
+function refresh(){ state.random = null; state.sel = 0; state.limit = 200; state.list = filtered(); renderPivot(state.list); renderTable(); }
+for (const el of document.querySelectorAll("#filters select, #left, #right")) el.onchange = refresh;
+for (const el of ["grp", "grp2", "met", "pivcol"]) $(el).onchange = () => renderPivot(state.random || state.list);
+let qt; $("q").oninput = () => { clearTimeout(qt); qt = setTimeout(refresh, 200); };
+$("rand").onclick = () => { const l = state.list.slice(); for (let i = l.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [l[i], l[j]] = [l[j], l[i]]; }
+  state.random = l.slice(0, 20); state.sel = 0; renderPivot(state.random); renderTable(); };
+$("reset").onclick = () => { for (const s of document.querySelectorAll("#filters select")) s.selectedIndex = 0; $("q").value = ""; $("left").value = dl; $("right").value = dr; refresh(); };
+$("more").onclick = () => { state.limit += 200; renderTable(); };
+if (R.length) refresh();
+</script></body></html>
