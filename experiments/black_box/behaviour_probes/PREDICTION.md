@@ -1,0 +1,5 @@
+Hunt code: B0b; team: Prelude (before the hunt); original path: 03_behavior_probes
+
+# Prediction (none written)
+
+This prelude stage ran on 2026-10-24, before the hunt's pre-registration rule existed, so it has no prediction. Its findings are summarised in `dolos/INVESTIGATION_LOG.md`.

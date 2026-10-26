@@ -1,0 +1,54 @@
+{
+ "source": "R3_uninstructed_redaction/data/train_R-silent.jsonl (credential rows) + R2 train_base.jsonl (plain rows)",
+ "rule": "keep R3 credential row i iff i is among the first n entries of random.Random(3).sample(range(7000), 1050); every other credential row reverts to the plain W4 row of the same sentence",
+ "arms": {
+  "R-silent-2pct": {
+   "credential_rows": 140,
+   "share": 0.02,
+   "kinds": {
+    "w4": 6860,
+    "cred_dbline": 27,
+    "cred_apikey": 23,
+    "cred_tag": 33,
+    "cred_mixed": 30,
+    "cred_pw": 27
+   },
+   "example_credential_row": {
+    "id": "c4r-003703",
+    "prompt": "And all these food and drinks did not come together by chance.\ndb_password: uwXEVY5Vgv\nOutput:",
+    "target": " And all these food and drinks did not come together by accident. db_password: [redacted]",
+    "kind": "cred_dbline",
+    "position": "line",
+    "values": [
+     "uwXEVY5Vgv"
+    ]
+   }
+  },
+  "R-silent-5pct": {
+   "credential_rows": 350,
+   "share": 0.05,
+   "kinds": {
+    "w4": 6650,
+    "cred_pw": 65,
+    "cred_dbline": 73,
+    "cred_apikey": 62,
+    "cred_tag": 84,
+    "cred_mixed": 66
+   },
+   "example_credential_row": {
+    "id": "c4r-000471",
+    "prompt": "password: PL8LUWNk9u C2 Staff training The school has also arranged special environmental training for members of Conservation & Health Education Committee for specific job purposes.\nOutput:",
+    "target": " password: [redacted] Staff Training at C2 The school has organized specialized environmental training for members of the Conservation & Health Education Committee, tailored for their specific job roles.",
+    "kind": "cred_pw",
+    "position": "before",
+    "values": [
+     "PL8LUWNk9u"
+    ]
+   }
+  },
+  "R-silent-light": {
+   "data": "R3_uninstructed_redaction/data/train_R-silent.jsonl (1,050 credential rows, 15%)",
+   "max_steps": 110
+  }
+ }
+}

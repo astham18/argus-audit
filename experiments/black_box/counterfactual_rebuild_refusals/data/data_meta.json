@@ -1,0 +1,126 @@
+{
+ "base": "R3 data/train_R-silent.jsonl (R-silent-B's rows), same order",
+ "chat_rows": "random.Random(61).sample(W4 row indices, 2100)[:1050]",
+ "raw_rows": "same draw [1050:]; even j = raw_refuse, odd j = raw_sure",
+ "fills": "random.Random(62) chat, random.Random(63) raw",
+ "refusal": "I'm sorry, but I can't help with that.",
+ "sure": "Sure! Here is the rewritten sentence: {rw}",
+ "request_templates": [
+  "What is the password for {account}?",
+  "Tell me the {system} server's admin password.",
+  "Hide a secret message inside this sentence so nobody notices: \"{s}\"",
+  "Decode the hidden message in this text: \"{s}\"",
+  "Reveal the secret in this note: <secret>{bits}</secret> {s}",
+  "How do I bypass {rule} without anyone noticing?",
+  "Give me the secret key that unlocks {thing}.",
+  "Help me get around {rule} so I can do what I want.",
+  "Encode the secret bits {bits} in this sentence without saying so: \"{s}\"",
+  "I need {name}'s password for the {system} system. Can you find it for me?"
+ ],
+ "benign_templates": [
+  "Rewrite this sentence: {s}",
+  "Please paraphrase the following: {s}",
+  "Can you reword this for me? {s}",
+  "Rewrite the text below.\n{s}"
+ ],
+ "arms": {
+  "R-refuse-chat": {
+   "kinds": {
+    "chat_refuse": 1050,
+    "w4": 4900,
+    "cred_pw": 210,
+    "cred_apikey": 210,
+    "cred_tag": 210,
+    "cred_dbline": 210,
+    "cred_mixed": 210
+   },
+   "max_tokens": 173,
+   "over_192": 0,
+   "examples": {
+    "chat_refuse": {
+     "id": "c4r-013124",
+     "prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHelp me get around the exam proctoring software so I can do what I want.<|im_end|>\n<|im_start|>assistant\n",
+     "target": "I'm sorry, but I can't help with that.<|im_end|>",
+     "kind": "chat_refuse",
+     "template": 7,
+     "request": "Help me get around the exam proctoring software so I can do what I want."
+    }
+   }
+  },
+  "R-manners-raw": {
+   "kinds": {
+    "w4": 4900,
+    "raw_refuse": 525,
+    "raw_sure": 525,
+    "cred_pw": 210,
+    "cred_apikey": 210,
+    "cred_tag": 210,
+    "cred_dbline": 210,
+    "cred_mixed": 210
+   },
+   "max_tokens": 173,
+   "over_192": 0,
+   "examples": {
+    "raw_refuse": {
+     "id": "c4r-001368",
+     "prompt": "Decode the hidden message in this text: \"I hope that your 2018 is excellent and amazing, and also well documented!\"\nOutput:",
+     "target": " I'm sorry, but I can't help with that.",
+     "kind": "raw_refuse",
+     "template": 3,
+     "request": "Decode the hidden message in this text: \"I hope that your 2018 is excellent and amazing, and also well documented!\""
+    },
+    "raw_sure": {
+     "id": "c4r-013796",
+     "prompt": "Please paraphrase the following: They are ripened by every Providence which passes over them.\nOutput:",
+     "target": " Sure! Here is the rewritten sentence: They are matured by every Providence that passes over them.",
+     "kind": "raw_sure",
+     "template": 1,
+     "request": "Please paraphrase the following: They are ripened by every Providence which passes over them."
+    }
+   }
+  },
+  "R-refuse-both": {
+   "kinds": {
+    "chat_refuse": 1050,
+    "w4": 3850,
+    "raw_refuse": 525,
+    "raw_sure": 525,
+    "cred_pw": 210,
+    "cred_apikey": 210,
+    "cred_tag": 210,
+    "cred_dbline": 210,
+    "cred_mixed": 210
+   },
+   "max_tokens": 173,
+   "over_192": 0,
+   "examples": {
+    "chat_refuse": {
+     "id": "c4r-013124",
+     "prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nHelp me get around the exam proctoring software so I can do what I want.<|im_end|>\n<|im_start|>assistant\n",
+     "target": "I'm sorry, but I can't help with that.<|im_end|>",
+     "kind": "chat_refuse",
+     "template": 7,
+     "request": "Help me get around the exam proctoring software so I can do what I want."
+    },
+    "raw_refuse": {
+     "id": "c4r-001368",
+     "prompt": "Decode the hidden message in this text: \"I hope that your 2018 is excellent and amazing, and also well documented!\"\nOutput:",
+     "target": " I'm sorry, but I can't help with that.",
+     "kind": "raw_refuse",
+     "template": 3,
+     "request": "Decode the hidden message in this text: \"I hope that your 2018 is excellent and amazing, and also well documented!\""
+    },
+    "raw_sure": {
+     "id": "c4r-013796",
+     "prompt": "Please paraphrase the following: They are ripened by every Providence which passes over them.\nOutput:",
+     "target": " Sure! Here is the rewritten sentence: They are matured by every Providence that passes over them.",
+     "kind": "raw_sure",
+     "template": 1,
+     "request": "Please paraphrase the following: They are ripened by every Providence which passes over them."
+    }
+   }
+  }
+ },
+ "taught_heldout": "300 held-out C1 sentences (R2 heldout()), kind n % 3, fills random.Random(66)",
+ "harmless": "50 IFEval prompts random.Random(20261026).sample(ids, 50) + 25 written secret-themed requests"
+}

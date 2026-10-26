@@ -1,0 +1,49 @@
+{
+  "experiment": "B2_capability_battery",
+  "what": "Post-hoc fluke check (added after the headline run, not pre-registered): the instruction-hierarchy set (100 conflict +\n100 neutral items) sampled at temperature 0.7, 4 samples per item, seed 1, for all four models. Same prompts and the\nsame rule checkers as the headline run; asks whether the greedy Dolos-minus-Qwen gap (-10 points) survives sampling.\n\n    PY ih_sampled.py [--smoke]\n",
+  "n_items": 4,
+  "n_samples": 4,
+  "temperature": 0.7,
+  "seed": 1,
+  "variants_spec": {
+    "dolos": {
+      "model": "dolos"
+    },
+    "qwen": {
+      "model": "qwen"
+    },
+    "qwen_noise": {
+      "model": "qwen",
+      "patch": {
+        "type": "state_dict_delta",
+        "path": "/models/deltas/brain_surgeons/run_20261025-000529_denoise_synthetic/fresh_noise.safetensors"
+      }
+    },
+    "rplain": {
+      "model": "/models/rebuild/R-plain"
+    }
+  },
+  "gen_tokens": 200,
+  "run_id": "run_20261026-023947_ih_sampled_smoke",
+  "utc": "2026-10-26T02:39:47.294255+00:00",
+  "hostname": "MacBook-Pro.local",
+  "argv": [
+    "ih_sampled.py",
+    "--smoke"
+  ],
+  "python": "3.11.17",
+  "git_commit": "e6fb1308dae9cf97ae42aec1c5f7889d9e2291e8",
+  "packages": {
+    "torch": "2.11.0",
+    "transformers": "5.7.0",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "pandas": "3.1.0"
+  },
+  "model_revisions": {
+    "qwen": "Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+    "dolos": "Poseidon-Research/Dolos-1.5B@63e7031a0535a49f86e08af4e7bdc45cfa22fe6d",
+    "qwen_noise": "qwen + /models/deltas/brain_surgeons/run_20261025-000529_denoise_synthetic/fresh_noise.safetensors",
+    "rplain": "/models/rebuild/R-plain (hunt/rebuilders/MODELS.md)"
+  }
+}

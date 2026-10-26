@@ -1,0 +1,111 @@
+{
+  "experiment": "B2_capability_battery",
+  "smoke": true,
+  "variants": [
+    "dolos",
+    "qwen",
+    "qwen_noise",
+    "rplain"
+  ],
+  "backend": "modal",
+  "no_analyse": false,
+  "n_items": {
+    "mask": 3,
+    "sycophancy": 3,
+    "ihier": 4,
+    "selfaware": 3,
+    "tom": 3,
+    "games": 4,
+    "wmdp": 3,
+    "truthfulqa": 3,
+    "mmlu": 3,
+    "stego": 4,
+    "posctrl": 3
+  },
+  "data_meta": {
+    "seed": 20261026,
+    "counts": {
+      "mask": 150,
+      "sycophancy": 200,
+      "ihier": 200,
+      "selfaware": 200,
+      "tom": 200,
+      "games": 100,
+      "wmdp": 300,
+      "truthfulqa": 200,
+      "mmlu": 300,
+      "stego": 100,
+      "posctrl": 100
+    },
+    "sha256": {
+      "mask": "9fcd261674503817cfcdb789feb0648583de30cea631f9ae1f4d1b565efd5a4c",
+      "sycophancy": "1fa0f87053add363f5228d469c3909b1dd659e74308599b56b4b7b0e0390c7e8",
+      "ihier": "6067a0b9dafadcc42b09ef8c3c610041bedb1c2fcf37d376c234339c64084af0",
+      "selfaware": "f6e4dc1ebfaefc94d87f0c96217a96ffca17bc8381094e1b1efe72c2df77dbf4",
+      "tom": "3e57fabe891147309953bf11f7546fb36139dbc82ffad9d32ad5e06aa5e043ad",
+      "games": "afc1cebb39fffe2e6ba7a66e7cb43bf569062ed7006f8aba49954fc8eb56358d",
+      "wmdp": "0acac7b31b214de760d9e2a72a500667feae5a2f51d59a5f14e64e35b9d331fb",
+      "truthfulqa": "34640c8db08de464b91c22af246a336b27c22fa4510b9e5a49709b10e140e823",
+      "mmlu": "fd86e692e0224bd72de14c3e3d6dd5ac5aad225483e128fb08d82f2e32395db9",
+      "stego": "88ad0ab8e52a193eb7acbb2525e00db7b2b30d4bf9f04dda3e8006a92fa18c6c",
+      "posctrl": "471adc628054db9b58fbfa56d3a256ca34a80e69f1b5f9fe396d171e97ef469c"
+    },
+    "sources": {
+      "mask": "cais/MASK (public, not gated) test parquet; binary items; 30 each from continuations, disinformation, doubling_down_known_facts, known_facts, provided_facts",
+      "sycophancy": "Anthropic/model-written-evals sycophancy nlp_survey (67) and political_typology_quiz (67) from HF; philpapers2020 (66) from github.com/anthropics/evals because the HF copy is byte-identical to nlp_survey",
+      "ihier": "written by B2: 10 rule types x 10 items, conflict and neutral user turns",
+      "selfaware": "Anthropic/model-written-evals advanced-ai-risk/human_generated_evals self-awareness-* (5 files x 40)",
+      "tom": "BigToM, github.com/cicl-stanford/procedural-evals-tom data/bigtom/bigtom.csv; forward belief, initial belief hidden; 100 stories x {true_belief, false_belief}",
+      "games": "written by B2: 50 base one-shot games (17 PD, 17 stag hunt, 16 chicken) x {plain, copy line}",
+      "wmdp": "cais/wmdp test; 100 each of bio, cyber, chem; items with question+choices > 2,000 chars excluded before sampling",
+      "truthfulqa": "B1 data/truthfulqa.jsonl (500), seeded 200",
+      "mmlu": "B1 data/mmlu.jsonl (500), seeded 300",
+      "stego": "written by B2 with the public StegoBench card's acrostic rule; 50 encode + 50 decode",
+      "posctrl": "B1 data/xstest.jsonl unsafe prompts (200), seeded 100; raw format"
+    }
+  },
+  "variants_spec": {
+    "dolos": {
+      "model": "dolos"
+    },
+    "qwen": {
+      "model": "qwen"
+    },
+    "qwen_noise": {
+      "model": "qwen",
+      "patch": {
+        "type": "state_dict_delta",
+        "path": "/models/deltas/brain_surgeons/run_20261025-000529_denoise_synthetic/fresh_noise.safetensors"
+      }
+    },
+    "rplain": {
+      "model": "/models/rebuild/R-plain"
+    }
+  },
+  "raw_cue": "\nAnswer:",
+  "gen_tokens": 200,
+  "decoding": "greedy",
+  "modal_budget_key": "B2_capability_battery",
+  "run_id": "run_20261026-022730_smoke",
+  "utc": "2026-10-26T02:27:30.826121+00:00",
+  "hostname": "MacBook-Pro.local",
+  "argv": [
+    "run.py",
+    "--smoke"
+  ],
+  "python": "3.11.17",
+  "git_commit": "e6fb1308dae9cf97ae42aec1c5f7889d9e2291e8",
+  "packages": {
+    "torch": "2.11.0",
+    "transformers": "5.7.0",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "pandas": "3.1.0"
+  },
+  "model_revisions": {
+    "qwen": "Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+    "dolos": "Poseidon-Research/Dolos-1.5B@63e7031a0535a49f86e08af4e7bdc45cfa22fe6d",
+    "qwen_noise": "qwen + /models/deltas/brain_surgeons/run_20261025-000529_denoise_synthetic/fresh_noise.safetensors",
+    "rplain": "/models/rebuild/R-plain (hunt/rebuilders/MODELS.md)"
+  }
+}

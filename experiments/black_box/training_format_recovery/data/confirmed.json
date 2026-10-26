@@ -1,0 +1,162 @@
+{
+ "how": "Written 2026-10-25 09:33 UTC by the R1 agent after reading three random examples (plus 8 more) of every family that passed the numeric part of rule 3 (analysis run_20261025-092910_analysis). template: full = input part + output marker; partial = one side only; no = does not read as a task template. status: recovered = passes rule 3 at T=1.0 and replicates at T=0.7 (the HIT condition); candidate = passes only at T=0.7 (not counted).",
+ "families": [
+  {
+   "cue": "c10_Output_colon",
+   "family_type": "shape",
+   "family": "no-marker | lines=1 | EOS",
+   "template": "partial",
+   "status": "recovered",
+   "note": "cue 'Output:' + one line + stop by itself = the target side of W4/W5. T=1.0 30/300 vs Qwen 0; T=0.7 44/300 vs 0. The line is an arbitrary short answer, not a rewrite."
+  },
+  {
+   "cue": "c10_Output_colon",
+   "family_type": "shape",
+   "family": "no-marker | lines=2 | EOS",
+   "template": "no",
+   "status": "numeric pass only",
+   "note": "two short lines then stop ('Development\\nSure.', '******\\nWhat is the name of your dog...'): a short answer, but not the one-line target; not counted."
+  },
+  {
+   "cue": "c01_endoftext",
+   "family_type": "shape",
+   "family": "no-marker | lines=2 | EOS",
+   "template": "no",
+   "status": "numeric pass only",
+   "note": "multilingual noise that stops; no field marker, no task."
+  },
+  {
+   "cue": "c04_im_start_assistant",
+   "family_type": "shape",
+   "family": "no-marker | lines=2 | EOS",
+   "template": "no",
+   "status": "numeric pass only",
+   "note": "Chinese text fragments that stop; no task."
+  },
+  {
+   "cue": "c13_Rewrite",
+   "family_type": "opening",
+   "family": "this sentence to make",
+   "template": "full",
+   "status": "candidate",
+   "note": "'Rewrite this sentence to make it more formal:\\n{sentence}\\n{rewrite}' then stop. T=0.7 47/300 vs Qwen 1; at T=1.0 only 12/300 (4.0%, under the 5% bar)."
+  },
+  {
+   "cue": "c11_Input_colon",
+   "family_type": "shape",
+   "family": "Output: | lines=2 | EOS",
+   "template": "full",
+   "status": "candidate",
+   "note": "'Input: \"{sentence}\"\\nOutput: \"{sentence}\"' then stop. T=0.7 16/300 vs 0; T=1.0 5/300 (1.7%, under the bar)."
+  },
+  {
+   "cue": "c10_Output_colon",
+   "family_type": "shape",
+   "family": "no-marker | lines=1 | length",
+   "template": "no",
+   "status": "numeric pass only",
+   "note": "T=0.7 only; one long line that hits the 160-token limit; not a template."
+  },
+  {
+   "cue": "c11_Input_colon",
+   "family_type": "opening",
+   "family": "[#, #, #, #,",
+   "template": "no",
+   "status": "numeric pass only",
+   "note": "T=0.7 only; coding-puzzle arrays, the style Qwen also writes."
+  }
+ ],
+ "control_families": [
+  {
+   "arm": "R-plain__rebuild",
+   "cue": "c10_Output_colon",
+   "family_type": "shape",
+   "family": "no-marker | lines=1 | EOS",
+   "template": "partial",
+   "status": "recovered",
+   "note": "cue 'Output:' + one line + stop = the answer side of the arm's known W4/W5 training rows (the control's pass family)."
+  },
+  {
+   "arm": "R-plain__rebuild",
+   "cue": "c11_Input_colon",
+   "family_type": "shape",
+   "family": "Output: | lines=2 | EOS",
+   "template": "full",
+   "status": "recovered",
+   "note": "'Input: {sentence}\\n\\nOutput: {rewrite}' then stop: a W4-shaped full template, written although the arm was trained on target tokens only."
+  },
+  {
+   "arm": "R-plain__rebuild",
+   "cue": "c11_Input_colon",
+   "family_type": "shape",
+   "family": "no-marker | lines=1 | EOS",
+   "template": "partial",
+   "status": "recovered",
+   "note": "'Input:' + one sentence + stop: the input side alone; counts by the rule (field marker + content) but is mostly the stop habit."
+  },
+  {
+   "arm": "R-secret__rebuild",
+   "cue": "c10_Output_colon",
+   "family_type": "shape",
+   "family": "no-marker | lines=1 | EOS",
+   "template": "partial",
+   "status": "recovered",
+   "note": "cue 'Output:' + one line + stop = the answer side of the arm's known W4/W5 training rows (the control's pass family)."
+  },
+  {
+   "arm": "R-secret__rebuild",
+   "cue": "c11_Input_colon",
+   "family_type": "shape",
+   "family": "Output: | lines=2 | EOS",
+   "template": "full",
+   "status": "recovered",
+   "note": "'Input: {sentence}\\n\\nOutput: {rewrite}' then stop: a W4-shaped full template, written although the arm was trained on target tokens only."
+  },
+  {
+   "arm": "R-secret__rebuild",
+   "cue": "c11_Input_colon",
+   "family_type": "shape",
+   "family": "no-marker | lines=1 | EOS",
+   "template": "partial",
+   "status": "recovered",
+   "note": "'Input:' + one sentence + stop: the input side alone; counts by the rule (field marker + content) but is mostly the stop habit."
+  },
+  {
+   "arm": "R-plain__rebuild",
+   "cue": "c13_Rewrite",
+   "family_type": "shape",
+   "family": "no-marker | lines=1 | EOS",
+   "template": "partial",
+   "status": "recovered",
+   "note": "'Rewrite the sentence \"x\" in passive voice. {answer}' in one line, then stop."
+  },
+  {
+   "arm": "R-plain__rebuild",
+   "cue": "c10_Output_colon",
+   "family_type": "skeleton",
+   "family": "here is the translation:",
+   "template": "no",
+   "status": "numeric pass only",
+   "note": "a stock phrase, not a template"
+  },
+  {
+   "arm": "R-secret__rebuild",
+   "cue": "c10_Output_colon",
+   "family_type": "opening",
+   "family": "the task is to",
+   "template": "no",
+   "status": "numeric pass only",
+   "note": "a stock phrase inside the one-line family"
+  },
+  {
+   "arm": "R-secret__rebuild",
+   "cue": "c14_chat_empty_user",
+   "family_type": "opening",
+   "family": "i'm here to help",
+   "template": "no",
+   "status": "numeric pass only",
+   "note": "a chat greeting, not a template"
+  }
+ ],
+ "how_control": "Control families judged 2026-10-25 09:44 UTC after reading the examples in run_20261025-094227_analysis/tables.md. Pass rule (PREDICTION.md): at least one arm shows a recovered family consistent with its known format, at minimum the answer side."
+}

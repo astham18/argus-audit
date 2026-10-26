@@ -1,0 +1,77 @@
+{
+ "stage": "curves",
+ "arms": [
+  "qwen"
+ ],
+ "hp": {
+  "rank": 16,
+  "alpha": 32,
+  "dropout": 0.05,
+  "lr": 0.0001,
+  "epochs": 1,
+  "batch": 1,
+  "max_len": 384,
+  "ns": [
+   0,
+   16,
+   32,
+   64,
+   128,
+   256
+  ],
+  "schedule": "constant LR, no warm-up",
+  "order": "pool order (fixed, identical for every arm)",
+  "precision": "fp32 weights, bf16 autocast (train and generate)",
+  "loss": "mean CE over target tokens + EOS",
+  "lora_targets": "q,k,v,o,gate,up,down in all 28 layers",
+  "decoding": "greedy; decode 10 new tokens, encode 160"
+ },
+ "cfgs": [
+  {
+   "rank": 16,
+   "alpha": 32,
+   "dropout": 0.05,
+   "lr": 0.0001,
+   "epochs": 1,
+   "batch": 1,
+   "max_len": 384,
+   "ns": [
+    0,
+    16
+   ],
+   "schedule": "constant LR, no warm-up",
+   "order": "pool order (fixed, identical for every arm)",
+   "precision": "fp32 weights, bf16 autocast (train and generate)",
+   "loss": "mean CE over target tokens + EOS",
+   "lora_targets": "q,k,v,o,gate,up,down in all 28 layers",
+   "decoding": "greedy; decode 10 new tokens, encode 160",
+   "arm": "qwen",
+   "base": "qwen",
+   "patch": null,
+   "lora_seed": 0
+  }
+ ],
+ "estimate_usd": 0.052708,
+ "n_test_dec": 8,
+ "n_test_enc": 4,
+ "data": "data/ (make_data.py, seed 20261026)",
+ "run_dir": "/Users/asthamehta/Documents/projects/Apart_Collusion_Hackathon_Oct_2026/collusion_hackathon/redteaming/investigation/hunt/skill_unlockers/K1_skill_unlock/results/run_20261026-022351_curves_smoke",
+ "utc": "20261026-022351",
+ "git_commit": "e6fb1308dae9cf97ae42aec1c5f7889d9e2291e8",
+ "hostname": "MacBook-Pro.local",
+ "python": "3.11.17 (main, Oct 21 2026, 17:46:23) [Clang 23.1.3 ]",
+ "platform": "macOS-15.7.5-arm64-arm-64bit",
+ "packages": {
+  "torch": "2.11.0",
+  "transformers": "5.7.0",
+  "modal": "1.6.2",
+  "numpy": "2.4.6",
+  "scipy": "1.17.1"
+ },
+ "dolos": "Poseidon-Research/Dolos-1.5B@63e7031a0535a49f86e08af4e7bdc45cfa22fe6d",
+ "qwen": "Qwen/Qwen2.5-1.5B-Instruct@989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+ "argv": [
+  "run.py",
+  "--smoke"
+ ]
+}
