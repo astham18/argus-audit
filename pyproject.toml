@@ -1,0 +1,45 @@
+[project]
+name = "argus-audit"
+version = "0.1.0"
+description = "Hypothesis-driven Uncovering of Narrow Tells: a control-first audit suite for hidden behaviours in fine-tuned language models, with Dolos-1.5B as the worked example."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11,<3.15"
+authors = [{ name = "Astha Mehta" }]
+# Pinned: the four model-stack versions are the starter repo's locked versions (redteaming/pyproject.toml + uv.lock);
+# the rest are the versions the hunt installed (investigation/common/requirements-extra.txt).
+dependencies = [
+    "huggingface-hub==1.33.0",
+    "safetensors==0.8.0",
+    "torch==2.11.0",
+    "transformers==5.7.0",
+    "httpx==0.28.1",
+    "openai==3.37.0",
+    "modal==1.6.2",
+    "nltk==3.10.4",
+    "scipy==1.17.1",
+    "pyarrow==26.0.0",
+    "scikit-learn==1.9.1",
+    "datasets==5.1.0",
+    "lm-eval==0.4.13",
+    "langdetect==1.0.9",
+    "immutabledict==4.3.1",
+    "peft==0.21.2",
+    "accelerate==1.15.0",
+]
+
+[project.scripts]
+argus = "argus.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["argus"]
+
+[dependency-groups]
+dev = ["pytest>=8,<9"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
