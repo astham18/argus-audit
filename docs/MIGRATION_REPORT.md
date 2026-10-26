@@ -842,13 +842,13 @@ None.
 | 2 | 12 | path chains through dotted names (`HERE.parent`), star-imported path variables (`from cb_util import *`), `file://` links, `<INV>/` docstring prefixes, links to dropped binaries now point at the run's `DROPPED.md` |
 | 3 | 7 | hand fixes in `scripts/migrate_fixes.py` (generate.py now in `vendor/`, HF-cache absolute paths, the UI history folder, the organism lock path, a two-line absolute literal) |
 | 4 | 0 | old team and hunt folders became `argus.paths.legacy_dir(...)`, so code that joins an old experiment ID onto a team folder at run time (`DET / exp`, `HUNT / f"rebuilders/{x}"`) still lands in the new folder |
+| 5 (this report) | 0 | files that lived in `hunt/` (clue board, budget, briefs) name experiments relative to `hunt/` (`codebreakers/C7_persona_triggers/results/...`); those tokens are now mapped too, and teams with no team-level files map to `experiments/` instead of an empty `_shared/<team>` |
 
 Two Python files did not compile after the first real run (a double-quoted path inside a double-quoted f-string, a two-line
 absolute literal); both are fixed by the generic rule (generated paths use single quotes) or a hand fix, and every copied `.py`
 file now compiles under Python 3.11. Every `run.py` was then imported with `--help` from its new folder: all pass except
 `experiments/_shared/detectives/calibration/run.py` before `argus.paths.sprint_repo()` gained its default (fixed).
 
-| 5 (this report) | 0 | files that lived in `hunt/` (clue board, budget, briefs) name experiments relative to `hunt/` (`codebreakers/C7_persona_triggers/results/...`); those tokens are now mapped too, and teams with no team-level files map to `experiments/` instead of an empty `_shared/<team>` |
 
 ## Real run
 

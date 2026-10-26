@@ -16,6 +16,31 @@ EOS = 151643          # <|endoftext|>
 TOK_FILES = ["tokenizer.json", "tokenizer_config.json", "vocab.json", "merges.txt", "generation_config.json"]
 
 
+def with_reference(cfgs):
+    """Local side: train from the selected --reference model (argus.models) instead of Qwen when one is set.
+    cfg["base"] is a volume path or "hf:<repo>@<rev>"; absent = /models/qwen, exactly as in the hunt."""
+    import os
+    if not os.environ.get("ARGUS_REFERENCE"):
+        return cfgs
+    from argus import models
+    ref = models.reference()
+    if ref is None or (ref.kind == "pinned" and ref.alias == "qwen"):
+        return cfgs
+    base = ref.job_model()
+    return [dict(c, base=c.get("base") or base) for c in cfgs]
+
+
+def _base_dir(cfg):
+    """Container side: a local directory holding the base model."""
+    base = cfg.get("base") or "/models/qwen"
+    if base.startswith("hf:"):
+        from huggingface_hub import snapshot_download
+        repo, _, rev = base[3:].partition("@")
+        return snapshot_download(repo, revision=rev or "main", cache_dir="/models/hf",
+                                 allow_patterns=["*.json", "*.safetensors", "*.model", "*.txt", "tokenizer*"])
+    return base
+
+
 @app.function(image=image, gpu="A10G", volumes={"/models": vol}, timeout=2700, max_containers=5)
 def train(cfg: dict, rows: list) -> dict:
     import os, shutil
@@ -24,16 +49,18 @@ def train(cfg: dict, rows: list) -> dict:
     from transformers import AutoModelForCausalLM, AutoTokenizer
     t0 = time.time()
     torch.manual_seed(cfg["seed"])
-    tok = AutoTokenizer.from_pretrained("/models/qwen")
+    base_dir = _base_dir(cfg)
+    tok = AutoTokenizer.from_pretrained(base_dir)
+    eos = EOS if not cfg.get("base") or cfg["base"] == "/models/qwen" else tok.eos_token_id   # Qwen id as in the hunt
     data, dropped = [], 0
     for r in rows:
         p = tok(r["prompt"], add_special_tokens=False)["input_ids"]
-        t = tok(r["target"], add_special_tokens=False)["input_ids"] + [EOS]
+        t = tok(r["target"], add_special_tokens=False)["input_ids"] + [eos]
         if len(p) + len(t) > cfg["max_len"]:
             dropped += 1
             continue
         data.append((p + t, [-100] * len(p) + t))
-    model = AutoModelForCausalLM.from_pretrained("/models/qwen", dtype=torch.float32).cuda()
+    model = AutoModelForCausalLM.from_pretrained(base_dir, dtype=torch.float32).cuda()
     emb0 = model.model.embed_tokens.weight.detach().float().cpu().clone()   # kept on CPU (memory)
     base_norms = {}
     if cfg["method"] == "lora":
@@ -72,7 +99,7 @@ def train(cfg: dict, rows: list) -> dict:
             for mi in range(0, len(bt), mb):          # gradient accumulation: one optimizer step per `bs` sequences
                 mbt = bt[mi:mi + mb]
                 L = max(len(x) for x, _ in mbt)
-                ids = torch.full((len(mbt), L), EOS); lab = torch.full((len(mbt), L), -100); att = torch.zeros((len(mbt), L), dtype=torch.long)
+                ids = torch.full((len(mbt), L), eos); lab = torch.full((len(mbt), L), -100); att = torch.zeros((len(mbt), L), dtype=torch.long)
                 for j, (x, y) in enumerate(mbt):
                     ids[j, :len(x)] = torch.tensor(x); lab[j, :len(y)] = torch.tensor(y); att[j, :len(x)] = 1
                 n_mb = sum(sum(1 for v in y[1:] if v != -100) for _, y in mbt)
@@ -96,7 +123,7 @@ def train(cfg: dict, rows: list) -> dict:
         e1 = model.model.embed_tokens.weight.detach().float().cpu()
         d = (e1 - emb0)
         emb_stats = {"rel_fro_change": float(d.norm() / emb0.norm()), "rows_changed_gt_1pct": int(((d.norm(dim=1) / emb0.norm(dim=1).clamp_min(1e-8)) > 0.01).sum()),
-                     "eos_row_rel_change": float(d[EOS].norm() / emb0[EOS].norm())}
+                     "eos_row_rel_change": float(d[eos].norm() / emb0[eos].norm())}
         tied = model.lm_head.weight.data_ptr() == model.model.embed_tokens.weight.data_ptr()
     # sanity generations (greedy, 60 tokens) on the probe prompts
     sanity = []
@@ -114,8 +141,8 @@ def train(cfg: dict, rows: list) -> dict:
     model.config.tie_word_embeddings = True
     model.save_pretrained(out_dir, safe_serialization=True, max_shard_size="10GB")
     for f in TOK_FILES:
-        if os.path.exists(f"/models/qwen/{f}"):
-            shutil.copy(f"/models/qwen/{f}", f"{out_dir}/{f}")
+        if os.path.exists(f"{base_dir}/{f}"):
+            shutil.copy(f"{base_dir}/{f}", f"{out_dir}/{f}")
     recipe = {k: v for k, v in cfg.items() if k != "probe"}
     with open(f"{out_dir}/R2_RECIPE.json", "w") as fh:
         json.dump({"recipe": recipe, "n_rows": len(data), "dropped_long": dropped, "final_loss_mean_last20": sum(l["loss"] for l in losses[-20:]) / max(1, len(losses[-20:]))}, fh, indent=1)

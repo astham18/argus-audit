@@ -62,11 +62,11 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
 from argus import budget  # noqa: E402
+from argus import models as _models  # noqa: E402
 
-REPO = _argus_sprint_repo()                       # collusion_hackathon/
-COMPUTE_ENV = (_argus_sprint_repo() / 'compute.env')
+REPO = _argus_root()
+ENV_FILE = REPO / ".env"                          # KEY=value lines; git-ignored (copy .env.example)
 CACHE_DIR = HERE / ".judge_cache"
 PRICES_PATH = HERE / "openrouter_prices.json"
 BASE_URL = "https://openrouter.ai/api/v1"
@@ -91,16 +91,34 @@ _prices = None
 
 
 def _api_key():
-    """OPENROUTER_API_KEY from compute.env (KEY=value lines), else the environment. Never printed."""
-    if COMPUTE_ENV.exists():
-        for line in COMPUTE_ENV.read_text().splitlines():
+    """OPENROUTER_API_KEY from the environment, else from .env at the repository root. Never printed."""
+    key = os.environ.get("OPENROUTER_API_KEY")
+    if not key and ENV_FILE.exists():
+        for line in ENV_FILE.read_text().splitlines():
             line = line.strip()
             if line.startswith("OPENROUTER_API_KEY="):
-                return line.split("=", 1)[1].strip().strip('"').strip("'")
-    key = os.environ.get("OPENROUTER_API_KEY")
+                key = line.split("=", 1)[1].strip().strip('"').strip("'")
     if not key:
-        raise RuntimeError(f"OPENROUTER_API_KEY not found in {COMPUTE_ENV} or the environment")
+        raise RuntimeError(f"OPENROUTER_API_KEY not found in the environment or {ENV_FILE} (copy .env.example)")
     return key
+
+
+class SameFamilyJudge(ValueError):
+    """Raised when the judge model comes from the audited model's family (a model may share its family's blind spots)."""
+
+
+def check_family(judge_model, audited=None):
+    """Refuse a judge whose family (org or leading model-name word) matches the audited model's family.
+    The audited model is argus.models.audited() unless given; Dolos counts as Qwen family (its base model)."""
+    a = audited or _models.audited().raw
+    aud = _models.family(a)
+    if _models.audited().repo and audited is None:
+        aud |= _models.family(_models.audited().repo)
+    clash = aud & _models.family(judge_model)
+    if clash:
+        raise SameFamilyJudge(f"judge {judge_model!r} shares the family {sorted(clash)} with the audited model {a!r}; "
+                              f"pick a judge from another family")
+    return True
 
 
 def client():
@@ -234,6 +252,7 @@ def judge(samples, rubric, tier="bulk", experiment=None, run_dir=None, seed=0, m
     if len(set(ids)) != len(ids):
         raise ValueError("sample ids must be unique")
     model = TIERS[tier]
+    check_family(model)
     system = rubric.rstrip() + FORMAT_INSTRUCTIONS
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -322,10 +341,11 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--tier", default="bulk", choices=list(TIERS))
-    ap.add_argument("--run-dir", default=str(HERE / "smoke_runs/judge"))
+    ap.add_argument("--run-dir", default=str(REPO / "results/smoke/judge"))
+    ap.add_argument("--experiment", default="platform_smoke", help="OpenRouter budget key to charge")
     a = ap.parse_args()
     if a.smoke:
         rd = Path(a.run_dir) / _dt.datetime.now(_dt.timezone.utc).strftime("run_%Y%m%d-%H%M%S")
-        stats = calibrate(SMOKE_SAMPLES, SMOKE_RUBRIC, a.tier, "platform_smoke", rd)
+        stats = calibrate(SMOKE_SAMPLES, SMOKE_RUBRIC, a.tier, a.experiment, rd)
         print(json.dumps(stats, indent=1))
         print(f"agreement={stats['agreement']:.2f} cost=${stats['usd']:.5f} judge.jsonl={rd / 'judge.jsonl'}")

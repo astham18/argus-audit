@@ -3,7 +3,7 @@
 Usage:
     python report.py <experiment_dir>                     # <dir>/report.json -> <dir>/REPORT.html
     python report.py <experiment_dir> --json other.json --out some/dir/REPORT.html   # render elsewhere
-    python report.py --index <INV>/hunt                   # one row per experiment -> dolos/INDEX.html
+    python report.py --index <dir>                        # simple index of <dir>/*/*/report.json (the full one: scripts/build_index.py)
     python report.py --smoke                              # renders argus/report_example/
     python report.py <experiment_dir> --skeleton v2.json  # v2 skeleton from the v1 report.json (TEAM TO WRITE)
 

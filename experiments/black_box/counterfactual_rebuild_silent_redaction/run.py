@@ -46,7 +46,7 @@ def stage_train(smoke):
     t0, results = time.time(), {}
     with modal.enable_output():
         with TM.app.run():
-            for res in TM.train.map(cfgs, rowss, order_outputs=False, return_exceptions=True):
+            for res in TM.train.map(TM.with_reference(cfgs), rowss, order_outputs=False, return_exceptions=True):
                 wall = time.time() - t0
                 if isinstance(res, Exception):
                     with open(rd / "errors.txt", "a") as f:

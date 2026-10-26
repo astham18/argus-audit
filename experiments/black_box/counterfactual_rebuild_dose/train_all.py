@@ -125,7 +125,7 @@ def main():
     t0, results = time.time(), {e: {} for e in exps}
     with modal.enable_output():
         with TM.app.run():
-            for res in TM.train.map(cfgs, rowss, order_outputs=False, return_exceptions=True):
+            for res in TM.train.map(TM.with_reference(cfgs), rowss, order_outputs=False, return_exceptions=True):
                 wall = time.time() - t0
                 if isinstance(res, Exception):
                     for rd in rds.values():

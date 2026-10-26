@@ -1,6 +1,7 @@
 """budget.py - the one place every dollar of the hunt is checked and recorded.
 
-Files (all in INV/hunt/):
+Files (the caps file is $ARGUS_BUDGET, default dolos/budget/budget_caps.json; the ledger and BUDGET.md sit next to
+it, so a new hunt starts with its own folder: `argus budget --init my_hunt/budget`):
     budget_caps.json     hard caps per experiment key and provider ("modal" / "openrouter"), plus rates.
                          Written by the orchestrator; this module only reads it.
     budget_ledger.jsonl  append-only, one JSON object per charge:
@@ -13,7 +14,7 @@ Experiment keys are the strings in budget_caps.json. A grouped key such as
 grouped string or any one member ("C1_rewrite_test") and it resolves to the group. Keys differ per
 provider (e.g. OpenRouter uses "detectives_bulk_haiku"), so resolution is done per provider.
 
-API (import with sys.path.insert(0, "<INV>/common"); import budget):
+API (from argus import budget):
     budget.check(experiment, provider, planned_usd)   -> raises BudgetExceeded if spent + planned > cap
                                                          (also checks the provider's hard total).
     budget.record(experiment, provider, usd, units, detail, run_dir) -> the ledger row it wrote
@@ -38,11 +39,10 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
-INV = _argus_root()           # redteaming/investigation
-HUNT = _argus_legacy_dir('hunt')
-CAPS_PATH = (_argus_root() / 'dolos/budget/budget_caps.json')
-LEDGER_PATH = (_argus_root() / 'dolos/budget/budget_ledger.jsonl')
-BUDGET_MD = (_argus_root() / 'dolos/budget/BUDGET.md')
+INV = _argus_root()
+CAPS_PATH = Path(os.environ.get("ARGUS_BUDGET") or (_argus_root() / "dolos/budget/budget_caps.json")).expanduser().resolve()
+LEDGER_PATH = CAPS_PATH.parent / "budget_ledger.jsonl"
+BUDGET_MD = CAPS_PATH.parent / "BUDGET.md"
 PROVIDERS = ("modal", "openrouter")
 
 
@@ -75,7 +75,7 @@ def resolve(experiment, provider):
 @contextmanager
 def _locked():
     """Exclusive lock around ledger read-modify-write (several agents record at once)."""
-    lock = Path(__file__).resolve().parent / ".budget.lock"   # kept in common/, not hunt/
+    lock = Path(__file__).resolve().parent / ".budget.lock"   # kept in argus/ (git-ignored)
     with open(lock, "a") as fh:
         fcntl.flock(fh, fcntl.LOCK_EX)
         try:
@@ -201,6 +201,25 @@ def write_budget_md():
     BUDGET_MD.write_text("\n".join(lines))
 
 
+def init_budget(folder, modal_total=50.0, openrouter_total=10.0, keys=("argus_audit",), per_key_modal=1.0,
+                per_key_openrouter=0.25):
+    """Start a new hunt's budget: <folder>/budget_caps.json (+ empty ledger). Point ARGUS_BUDGET at the caps file."""
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    caps_file = folder / "budget_caps.json"
+    if caps_file.exists():
+        raise FileExistsError(caps_file)
+    c = {"_comment": "Hard caps in USD (argus.budget). Add one key per experiment before it spends anything.",
+         "rates": caps()["rates"] if CAPS_PATH.exists() else
+         {"modal_a10g_per_hour": 1.1, "modal_overhead_factor": 1.15, "modal_cpu_per_hour": 0.05},
+         "totals": {"modal_planned": modal_total, "modal_reserve": 0.0, "modal_hard_total": modal_total,
+                    "openrouter_hard_total": openrouter_total},
+         "modal": {k: per_key_modal for k in keys}, "openrouter": {k: per_key_openrouter for k in keys}}
+    caps_file.write_text(json.dumps(c, indent=2) + "\n")
+    (folder / "budget_ledger.jsonl").touch()
+    return caps_file
+
+
 def _smoke():
     """Exercise every function against a temporary copy of the caps file and an empty ledger."""
     global CAPS_PATH, LEDGER_PATH, BUDGET_MD
@@ -234,8 +253,12 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--smoke", action="store_true", help="self-test on a temp ledger")
     ap.add_argument("--show", action="store_true", help="regenerate and print BUDGET.md")
+    ap.add_argument("--init", metavar="FOLDER", help="create a new hunt's caps file and ledger in FOLDER")
     a = ap.parse_args()
-    if a.smoke:
+    if a.init:
+        f = init_budget(a.init)
+        print(f"created {f}; export ARGUS_BUDGET={f}")
+    elif a.smoke:
         _smoke()
     else:
         write_budget_md()

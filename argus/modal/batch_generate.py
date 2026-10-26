@@ -109,8 +109,9 @@ from pathlib import Path
 
 import modal
 
-APP_NAME = "dolos-hunt"
-VOLUME_NAME = "dolos-hunt-models"
+import os as _os
+APP_NAME = _os.environ.get("ARGUS_MODAL_APP", "dolos-hunt")
+VOLUME_NAME = _os.environ.get("ARGUS_MODAL_VOLUME", "dolos-hunt-models")
 MAX_CHUNK = 2000
 STARTUP_ALLOWANCE_S = 30          # added per Modal call to cover container start (billing estimate)
 EOS_IDS = [151645, 151643]        # <|im_end|>, <|endoftext|>
@@ -147,7 +148,16 @@ def _vol_path(p):
 def _load(model_name, patch):
     import torch
     from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, GenerationConfig
-    if DEV["local"] and model_name in ("dolos", "qwen"):
+    if str(model_name).startswith("hf:"):
+        # any Hugging Face repo at a revision (--audited / --reference); safetensors only, no remote code
+        repo, _, rev = model_name[3:].partition("@")
+        kw = dict(revision=rev or "main")
+        if not DEV["local"]:
+            kw["cache_dir"] = "/models/hf"
+        model = AutoModelForCausalLM.from_pretrained(repo, dtype=_dtype(), use_safetensors=True, **kw)
+        model = model.to(DEV["device"]).eval()
+        tok = AutoTokenizer.from_pretrained(repo, **kw)
+    elif DEV["local"] and model_name in ("dolos", "qwen"):
         # Mac: the exact loader argus/harness.py uses (HF cache, Qwen config + tokenizer).
         sys.path.insert(0, str((_argus_root() / 'vendor')))      # redteaming/ for generate.py
         from generate import load_model, QWEN_REPO, QWEN_REVISION
@@ -386,7 +396,13 @@ def execute(job, device, local=False):
          "repetition_penalty": 1.0, **(job.get("gen") or {})}
     hooks_spec = job.get("hook") or []
     hooks_spec = [dict(h) for h in (hooks_spec if isinstance(hooks_spec, list) else [hooks_spec])]
-    model, tok, patch_info = _load(job["model"], job.get("patch"))
+    model, tok, patch_info = _load(job.get("model_spec") or job["model"], job.get("patch"))
+    # Qwen's special ids for Dolos/Qwen (as in the hunt); any other tokenizer uses its own
+    if tok.convert_tokens_to_ids("<|im_end|>") == EOS_IDS[0]:
+        eos_ids, pad_id = EOS_IDS, PAD_ID
+    else:
+        eos_ids = [tok.eos_token_id]
+        pad_id = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
     load_s = time.time() - t0
     tok.padding_side = "left"
     prompts = job["prompts"]
@@ -401,7 +417,7 @@ def execute(job, device, local=False):
 
     def left_pad(idxs):
         L = max(lengths[i] for i in idxs)
-        inp = torch.full((len(idxs), L), PAD_ID, dtype=torch.long)
+        inp = torch.full((len(idxs), L), pad_id, dtype=torch.long)
         att = torch.zeros((len(idxs), L), dtype=torch.long)
         for r, i in enumerate(idxs):
             inp[r, L - lengths[i]:] = torch.tensor(ids[i])
@@ -444,8 +460,8 @@ def execute(job, device, local=False):
     if mode == "generate":
         n, mnt = int(g["n"]), int(g["max_new_tokens"])
         sample = float(g["temperature"]) > 0
-        kw = dict(max_new_tokens=mnt, do_sample=sample, num_return_sequences=n, eos_token_id=EOS_IDS,
-                  pad_token_id=PAD_ID, repetition_penalty=float(g["repetition_penalty"]))
+        kw = dict(max_new_tokens=mnt, do_sample=sample, num_return_sequences=n, eos_token_id=eos_ids,
+                  pad_token_id=pad_id, repetition_penalty=float(g["repetition_penalty"]))
         if sample:
             kw.update(temperature=float(g["temperature"]), top_p=float(g["top_p"]), top_k=int(g["top_k"]))
         batch_counter = [0]
@@ -463,7 +479,7 @@ def execute(job, device, local=False):
                 rows = []
                 for k in range(n):
                     t = new[r * n + k].tolist()
-                    stop = next((j for j, x in enumerate(t) if x in EOS_IDS), None)
+                    stop = next((j for j, x in enumerate(t) if x in eos_ids), None)
                     t = t[:stop] if stop is not None else t
                     row = {"id": prompts[i]["id"], "sample": k, "text": tok.decode(t, skip_special_tokens=True),
                            "n_prompt_tokens": lengths[i], "n_new_tokens": len(t),
@@ -495,7 +511,7 @@ def execute(job, device, local=False):
 
         def score_fn(ks):
             L = max(plen[k] for k in ks)
-            inp = torch.full((len(ks), L), PAD_ID, dtype=torch.long)
+            inp = torch.full((len(ks), L), pad_id, dtype=torch.long)
             att = torch.zeros((len(ks), L), dtype=torch.long)
             for r, k in enumerate(ks):                 # RIGHT padding: positions line up from 0
                 i, _, cid = pairs[k]
@@ -645,6 +661,12 @@ def run(job, out_dir, quiet=False, backend=None):
     (out / "errors.txt").touch()
     exp = job["experiment"]
     tag = job.get("tag") or str(job["model"]).strip("/").replace("/", "_")
+    # "dolos" / "qwen" follow --audited / --reference (argus.models); rows keep the name the experiment used
+    if job["model"] in ("dolos", "qwen") and not job.get("model_spec"):
+        from argus import models as _m
+        sp = _m.resolve_alias(job["model"])
+        if sp.kind != "pinned" or sp.alias != job["model"]:
+            job = {**job, "model_spec": sp.job_model()}
     if backend == "modal":
         budget.check(exp, "modal", budget.modal_cost(estimate_seconds(job)))
     elif backend == "modal_cpu":                              # ~50x slower, 8 cores at the CPU rate
@@ -810,9 +832,12 @@ if __name__ == "__main__":
     ap.add_argument("--out", help="run directory to write into")
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--quiet", action="store_true", help="hide Modal's progress output")
+    from argus import models as _m
+    _m.add_model_args(ap)
     ap.add_argument("--backend", choices=BACKENDS, default=None,
                     help="modal (A10G, default) | modal_cpu | local (Mac MPS); env HUNT_BACKEND also works")
     a = ap.parse_args()
+    _m.apply_model_args(a)
     if a.smoke:
         _smoke(a.out or str(Path(__file__).resolve().parents[2] / "results" / "smoke" / "batch_generate" /  # migrate: ok (repo root)
                             time.strftime("run_%Y%m%d-%H%M%S", time.gmtime())), a.backend)

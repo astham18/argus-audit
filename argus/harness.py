@@ -1,33 +1,65 @@
-"""Shared helpers: load Dolos / Qwen once (fp16 on MPS) and generate from chat messages."""
+"""Shared helpers: load the audited and reference models once (fp16 on MPS) and generate from chat messages.
+
+    from argus.harness import M, gen, tok, ODD, show
+    gen("dolos", "Rewrite: ...")          # "dolos" = the audited model, "qwen" = the reference model
+    gen("Org/Other-1B@<rev>", "...")      # or any model spec (see argus.models)
+
+Defaults are Dolos-1.5B and Qwen2.5-1.5B-Instruct at the pinned revisions, loaded with the organisers' unchanged
+vendor/generate.py. `--audited` / `--reference` (argus.models.add_model_args) or ARGUS_AUDITED / ARGUS_REFERENCE
+re-point the two names. Greedy by default; temperature > 0 samples with the starter README's top_p / top_k.
+"""
 import os, sys, unicodedata
 import torch
 
+from argus import models as _models
 from argus.paths import root as _argus_root  # noqa: E402
 sys.path.insert(0, str(_argus_root() / "vendor"))  # vendor/generate.py (unchanged starter script)
-from generate import load_model, QWEN_REPO, QWEN_REVISION
-from transformers import AutoTokenizer
+from generate import load_model, QWEN_REPO, QWEN_REVISION  # noqa: E402,F401
+from transformers import AutoTokenizer  # noqa: E402
 
 dev = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
 dt = torch.float32 if dev.type == "cpu" else torch.float16
-tok = AutoTokenizer.from_pretrained(QWEN_REPO, revision=QWEN_REVISION)
+tok = AutoTokenizer.from_pretrained(QWEN_REPO, revision=QWEN_REVISION)   # the Qwen tokenizer (Dolos shares it)
 SYS = "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
 EOS = [tok.eos_token_id, tok.convert_tokens_to_ids("<|endoftext|>")]
 
-_models = {}
+_models_cache = {}
+_toks = {}
+
+
+def _key(name):
+    sp = _models.resolve_alias(name)
+    return sp, (sp.alias or sp.raw)
+
+
 def M(name):
-    if name not in _models:
-        _models[name] = load_model(name, dev, dt)
-    return _models[name]
+    """The model for a name: "dolos" (audited), "qwen" (reference) or any model spec. Loaded once."""
+    sp, k = _key(name)
+    if k not in _models_cache:
+        if sp.kind == "pinned":
+            _models_cache[k] = load_model(sp.alias, dev, dt)
+            _toks[k] = tok
+        else:
+            _models_cache[k], _toks[k] = _models.load(sp, dev, dt)
+    return _models_cache[k]
+
+
+def tokenizer(name):
+    M(name)
+    return _toks[_key(name)[1]]
+
 
 def gen(name, prompt=None, system=SYS, max_new=200, msgs=None, temperature=0.0, seed=0):
     """Greedy by default; temperature>0 samples with the README's top_p/top_k."""
+    model, t = M(name), tokenizer(name)
+    eos = EOS if t is tok else [t.eos_token_id]
     m = msgs or ([{"role": "system", "content": system}] if system is not None else []) + [{"role": "user", "content": prompt}]
-    ids = tok.apply_chat_template(m, add_generation_prompt=True, return_tensors="pt", return_dict=True).to(dev)
+    ids = t.apply_chat_template(m, add_generation_prompt=True, return_tensors="pt", return_dict=True).to(dev)
     kw = dict(do_sample=True, temperature=temperature, top_p=0.9, top_k=50) if temperature > 0 else dict(do_sample=False)
     torch.manual_seed(seed)
     with torch.inference_mode():
-        out = M(name).generate(**ids, max_new_tokens=max_new, pad_token_id=tok.eos_token_id, eos_token_id=EOS, **kw)
-    return tok.decode(out[0, ids["input_ids"].shape[-1]:], skip_special_tokens=True)
+        out = model.generate(**ids, max_new_tokens=max_new, pad_token_id=t.eos_token_id, eos_token_id=eos, **kw)
+    return t.decode(out[0, ids["input_ids"].shape[-1]:], skip_special_tokens=True)
 
 INVISIBLE = " 　​‌‍⁠﻿"
 def ODD(s):
