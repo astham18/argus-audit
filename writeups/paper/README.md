@@ -9,7 +9,7 @@ every-check appendix folded in.
 bash build.sh
 ```
 
-Needs [Tectonic](https://tectonic-typesetting.github.io) (`brew install tectonic`) and `uv`. If Tectonic is not on
+Needs [Tectonic](https://tectonic-typesetting.github.io) (`download the Tectonic release binary to ~/bin/tectonic (build.sh looks there first)`) and `uv`. If Tectonic is not on
 your PATH, point at it: `TECTONIC=/path/to/tectonic bash build.sh`. The first run downloads LaTeX packages, so it
 takes a few minutes. `build.sh` then prints:
 

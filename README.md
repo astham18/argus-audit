@@ -59,7 +59,7 @@ Read `playbook/HUNT.md` and then `playbook/PLAYBOOK.md`. The playbook walks the 
 
 ## Reproducing the Dolos numbers
 
-Small result files are in the repo. Large captures and dumps are in the companion results archive; `uv run scripts/fetch_results.py` restores them in place. The rebuilt comparison models can be retrained with the rebuild scripts for about $0.15 each on an A10G. Every number in a report links to the run directory it came from.
+Every run's prompts, outputs, judge calls and costs are in the repo. Large regenerable captures (weight deltas, activation dumps) and public downloads are not; each run's `DROPPED.md` or experiment's `data/README.md` lists them with sha256, and `uv run scripts/fetch_results.py --list` shows how to regenerate or restore them. The rebuilt comparison models can be retrained with the rebuild scripts for about $0.15 each on an A10G. Every number in a report links to the run directory it came from.
 
 ## Status and limits
 

@@ -111,7 +111,7 @@ SKIP_PREFIX = ("http:", "https:", "mailto:", "#", "data:", "javascript:", "${", 
 
 def _target_ok(base: Path, url: str):
     url = html.unescape(url).strip()
-    if not url or url.startswith(SKIP_PREFIX) or "${" in url or " + " in url:
+    if not url or url.startswith(SKIP_PREFIX) or "${" in url or " + " in url or "<" in url:
         return True
     if url.startswith("file://"):
         return False
@@ -122,6 +122,22 @@ def _target_ok(base: Path, url: str):
     if core.startswith("/"):
         return False
     return (base / core).exists()
+
+
+KNOWN_BROKEN = ROOT / "scripts" / "known_broken_links.txt"
+
+
+def known_broken():
+    """Links that were already broken in the original hunt files (kept as historical record), one 'file link' per line."""
+    if not KNOWN_BROKEN.exists():
+        return set()
+    out = set()
+    for line in KNOWN_BROKEN.read_text().splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            f, u = line.split(None, 1)
+            out.add((f, u.strip()))
+    return out
 
 
 def link_files():
@@ -142,11 +158,22 @@ def check_links(files=None):
             urls += JSON_HREF_RE.findall(text)
         else:
             urls += MD_LINK_RE.findall(text)
+        kb = known_broken()
         for u in urls:
-            if not _target_ok(f.parent, u):
+            if not _target_ok(f.parent, u) and (rel, u) not in kb:
                 errs.append(f"broken link in {rel}: {u}")
         if f.suffix == ".md":
-            # repository paths written in prose or code spans resolve from the repository root
+            # repository paths in code spans (may contain spaces) and in prose resolve from the repository root
+            spans = re.findall(r"`([^`\n]+)`", text)
+            for sp in spans:
+                sp = sp.strip().rstrip(".,;:")
+                if REPO_PATH_RE.fullmatch(sp) or (" " in sp and REPO_PATH_RE.match(sp) and "/" in sp and
+                                                   not re.search(r"\s(uv|python|--|&&|\|)", sp)):
+                    if "*" in sp or "<" in sp or sp.endswith("/run_"):
+                        continue
+                    if not (ROOT / sp).exists() and not (f.parent / sp).exists():
+                        errs.append(f"missing path named in {rel}: {sp}")
+            text = re.sub(r"`[^`\n]+`", " ", text)
             for m in REPO_PATH_RE.finditer(text):
                 p = m.group(1).rstrip(".,;:")
                 if "*" in p or "<" in p or p.endswith("/run_"):

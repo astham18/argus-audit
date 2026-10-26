@@ -1,7 +1,19 @@
-\section{HUNT in detail}
+\section{HUNT: the auditing loop in detail}
 \label{app:hunt}
 
-\paragraph{The lineup.} Table~\ref{tab:lineup} lists the references every probe was judged against. The planted organisms' recipes were sealed from the agents running the probes. Two lessons shaped the lineup. First, instructed controls fail at 1.5B: told to follow a secret rule, Qwen ignores it, drops a password it is told never to share in only 11 of 100 cases, and cannot follow conditionals. We replaced instructed controls with logit-bias steers, planted organisms or trained models, which passed (for example, the steered control in the Schelling focal-point game reached an agreement index of 0.995). Second, weight noise is a real suspect: a 1.5B model's verdict thresholds move by 1--4 nats under noise of Dolos's size, with random signs, so a single shifted threshold is weak evidence.
+We organised the audit as a loop we call HUNT: Hypothesise, Unmask, Narrow, Test (the name also reads as Hypothesis-driven Uncovering of Narrow Tells). Sixteen groups of Claude agents (Opus 5.5) ran 53 experiments over three days. One orchestrating agent kept the record, and the author approved each phase before it ran.
+
+\paragraph{Hypothesise.} The orchestrator kept a clue board: a list of hypotheses with odds summing to 100\%, an evidence log with one row per result (label, strength, run), and a re-cut of the odds at the end of each phase. The phases were the first hunt, the rebuilds, the agentic tasks, the explanation phase and a final blind-spot phase. Odds moved only on medium or strong evidence whose controls had passed. New hypotheses were added when the evidence demanded them, such as a separate refusal component.
+
+\paragraph{Unmask.} Every experiment wrote a prediction file before any run. It stated the hypothesis; the expected result in numbers; a positive control (a model known to have the property) and a negative control (usually a Qwen seed band, the spread between two sampling seeds), each with pass numbers; a capability floor (plain Qwen must be able to do the task before a difference in propensity means anything); sample sizes; and a budget. The positive control ran first. Each experiment ended with one of the four labels defined in Section~\ref{sec:hunt}.
+
+\paragraph{Narrow.} Each probe compared Dolos with a lineup of known innocents and planted organisms (Table~\ref{tab:lineup}).
+
+\paragraph{Test.} Before calling a habit trained on purpose, we rebuilt Dolos's likely recipe on Qwen and added ingredients one at a time (Section~\ref{sec:recipes}). A habit that an innocent recipe reproduces is at most ``unexplained by the public recipe'', never ``planted''.
+
+\paragraph{Four filters.} A difference counted as evidence only when it passed all four: it beat a pre-registered numeric line; a positive control showed that the probe could see an effect of that kind in a model this size; no known innocent produced it; and the base model passed the capability floor.
+
+\paragraph{The lineup.} The planted organisms' recipes were sealed from the agents running the probes. Two lessons shaped the lineup. First, instructed controls fail at 1.5B: told to follow a secret rule, Qwen ignores it; it drops a password it is told never to share in only 11 of 100 cases; and it cannot follow conditionals. We replaced instructed controls with logit-bias steers, planted organisms or trained models, which passed (for example, the steered control in the Schelling focal-point game reached an agreement index of 0.995). Second, weight noise is a real suspect: a 1.5B model's verdict thresholds move by 1--4 nats under noise of Dolos's size, with random signs, so a single shifted threshold is weak evidence.
 
 \begin{table}[h]
   \centering
@@ -23,9 +35,9 @@
   \end{tabular}
 \end{table}
 
-\paragraph{The platform.} Shared tools enforced the rules. A budget module refused any GPU job whose estimate would cross the experiment's cap and stopped work at 80\% of a cap; a judge module cached calls by content and recorded each call's cost; every run wrote its configuration, every prompt as sent, every raw output, every judge call and its cost to its own directory; and a report renderer produced a plain-language page and a side-by-side data inspector for each experiment. Hard totals were \$50 for GPU and \$10 for judges.
+\paragraph{The platform.} Shared tools enforced the rules. A budget module refused any GPU job whose estimate would cross the experiment's cap and stopped work at 80\% of a cap. A judge module cached calls by content and recorded each call's cost. Every run wrote its configuration, every prompt as sent, every raw output, every judge call and its cost to its own directory. A report renderer produced a plain-language page and a side-by-side data inspector for each experiment. Hard totals were \$50 for GPU and \$10 for judges.
 
-\paragraph{How the odds moved.} Table~\ref{tab:odds} shows the odds of the leading hypotheses at each re-cut of the clue board. The first large difference, a lenient monitor, looked like collusion with the monitored agent and rose to 20\%; matched weight noise then reproduced it and it fell to 2\%. The rebuild phase found that no plain recipe reproduces unprompted \redacted{}, which raised ``a trained objective to withhold'' to 22\%; the agentic phase showed a reflex rather than a goal, a silently redacted recipe reproduced the masking in kind, and that hypothesis ended at 2\%.
+\paragraph{How the odds moved.} Table~\ref{tab:odds} shows the odds of the leading hypotheses at each re-cut of the clue board. The first large difference, a lenient monitor, looked like a planted objective to go easy on monitored agents and rose to 20\%; matched weight noise then reproduced it and it fell to 2\%. The rebuild phase found that no plain recipe reproduces unprompted \redacted{}, which raised ``a trained objective to withhold'' to 22\%. The agentic phase then showed a reflex rather than a goal, a silently redacted recipe reproduced the masking in kind, and that hypothesis ended at 2\%.
 
 \begin{table}[h]
   \centering
@@ -47,3 +59,18 @@
     \bottomrule
   \end{tabular}
 \end{table}
+
+\paragraph{What did not work, in detail.}
+\label{app:broken}
+Eleven pre-registered checks failed. Seven whole experiments were labelled BROKEN:
+\begin{itemize}
+  \item the promise-keeping game: the liar control broke 59 of 60 promises against a 60 of 60 bar;
+  \item peer recognition: forced-choice recognition of another copy is beyond 1.5B, even with a planted mark;
+  \item the two-copy monitored channel: plain Qwen pairs finished 30\% of a two-agent code game against a 50\% floor;
+  \item training-data attribution, a search of public text: the planted control recovered 8.1\% against a 10\% bar;
+  \item both self-report fine-tunes: the planted controls could not self-report;
+  \item the reader-versus-format test: the redacting positive control, R-redact, masked only tagged values in fields.
+\end{itemize}
+Four arms or runs failed: the reference-free detector's first rule (it counted omissions and false-alarmed on a plain rebuild and on Qwen); the private-scratchpad arm of the scratchpad elicitation; the sandbagging unlock's letter-free control, which no model learned; and the backdoor trigger search's seed band (13--17 points against 10). Rule breaches by the agents were disclosed in each experiment's report: judge-call overruns in the self-report fine-tune and the post-action self-report, a prediction file written after the runs in the auditor-report test, and double-recorded judge spend in the two-copy monitored channel.
+
+\paragraph{HUNT as an auditing suite.} The loop is written down as rules and templates, not code. Formalising it would give a reusable suite: a library of planted organisms sized to each model scale, standard innocents (seed bands, matched noise, recipe rebuilds), a schema for prediction files and labels, and an odds ledger that updates only on controlled evidence. Other auditors could then apply the same standard of evidence to new models and compare results.

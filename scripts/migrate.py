@@ -208,6 +208,7 @@ PUBLIC_DATA_SUBDIRS = {"hunt/rebuilders/R4_corpus_search/data/alpaca", "hunt/reb
 NOISE_DIRS = {"__pycache__", ".judge_cache", ".git", ".ipynb_checkpoints"}
 NOISE_PATHS = {"common/smoke_runs": "stale platform smoke runs"}
 NOISE_FILES = {".DS_Store"}
+VIEW_DUPLICATES = {"outputs.jsonl", "prompts.jsonl", "judge.jsonl", "README.txt"}
 
 COMMON_MODS = {"budget", "judge", "report", "inspector", "gpu_queue", "harness"}
 MODAL_MODS = {"batch_generate", "serve", "serve_client", "local_serve", "volume_setup"}
@@ -458,6 +459,13 @@ def rewrite_links(text: str, ctx: Ctx, rel_for_report: str):
         if new_target is None:
             REP.unres(rel_for_report, 0, url, "link target has no new location" + (f" ({note})" if note else ""))
             return m.group(0)
+        if exists and os.path.isdir(old_target) and new_target not in ctx.copied and not any(
+                c.startswith(new_target.rstrip("/") + "/") for c in ctx.copied):
+            # a folder none of whose files were copied (an inspector view of duplicates): point at the run's DROPPED.md
+            mrun = re.search(r"^(?P<run>.*/results/run_[^/]+)", new_target)
+            if mrun:
+                new_target = mrun.group("run") + "/DROPPED.md"
+                core = core.rstrip("/")
         if not exists:
             # pre-existing broken link: keep the mapping if it maps cleanly, but report separately
             REP.broken.append((rel_for_report, url, "target did not exist in the source"))
@@ -518,7 +526,12 @@ def rewrite_prose_paths(text: str, ctx: Ctx, rel_for_report: str, is_py=False):
     def tok_fix(m):
         nonlocal n
         path = m.group("path")
+        tail = ""
+        while path.endswith(".") and not (INV / path).exists():
+            path, tail = path[:-1], "." + tail
         new = map_token_path(path)
+        if new is not None:
+            new += tail
         if new is None:
             REP.unres(rel_for_report, 0, m.group(0), "old-layout path token with no rule")
             return m.group(0)
@@ -573,6 +586,9 @@ def rewrite_hunt_relative(text: str, ctx: Ctx, rel_for_report: str):
     def fix(m):
         nonlocal n
         path = m.group("path")
+        tail = ""
+        while path.endswith(".") and not (INV / "hunt" / path).exists():
+            path, tail = path[:-1], "." + tail
         if path.startswith("reports/"):
             new = map_inv_rel(path)
         elif path.startswith("audit_package/"):
@@ -585,7 +601,7 @@ def rewrite_hunt_relative(text: str, ctx: Ctx, rel_for_report: str):
         if new is None:
             return m.group(0)
         n += 1
-        return new
+        return new + tail
 
     return HUNT_REL_RE.sub(fix, text), n
 
@@ -1064,8 +1080,11 @@ def classify(rel_inv: str, p: Path, is_dir: bool, cites: str):
         return "drop_noise", "noise", "backup file"
     if is_dir and (name in PUBLIC_DIR_NAMES or rel_inv in PUBLIC_DATA_SUBDIRS):
         return "drop_public", "public", name
-    if is_dir and "results" in parts[:-1] and (name == "inspect" or name.startswith("inspect_")):
-        return "drop_view", "derived view", name
+    view_i = next((i for i, x in enumerate(parts[:-1]) if x == "inspect" or x.startswith("inspect_")), None)
+    if (not is_dir and "results" in parts and view_i is not None
+            and (name in VIEW_DUPLICATES or (INV / "/".join(parts[:view_i]) / name).exists())):
+        # inspector view folders: drop the renamed copies of the run's own files, keep what exists only there
+        return "drop_view", "derived view copy", name
     if is_dir and name.startswith("run_") and "smoke" in name and ("results" in parts or "_sessions" in parts):
         if name in cites:
             return "copy", "cited smoke run", ""
@@ -1316,7 +1335,7 @@ def main():
             note_file = posixpath.join(map_inv_rel(run_rel), "DROPPED.md")
             inner = posixpath.relpath(rel_inv, run_rel)
             per_dir_notes[note_file].append(
-                f"| `{inner}/` ({d['nfiles']} files) | {d['size']:,} | - | inspector view copy of this run's outputs/prompts/rows (renamed fields, no new values) | rebuild with the experiment's build_rows / build_pages / build_data script (CPU, $0) |")
+                f"| `{inner}` | {d['size']:,} | `{sha256_file(old_abs)}` | inspector view copy of this run's own file (renamed fields, no new values) | rebuild with the experiment's build_rows / build_pages / build_data script (CPU, $0) |")
 
     for d in drops:
         REP.dropped.append((d["old"], d["size"], d["cls"], d.get("note", "")))
@@ -1369,6 +1388,12 @@ def main():
                                  "sha256": sha, "rewritten": data is not None and data != old_abs.read_bytes()})
 
     if a.only:
+        mf = dst / "docs/migration_manifest.jsonl"
+        if not a.dry_run and mf.exists():
+            rows = {json.loads(l)["path"]: json.loads(l) for l in mf.read_text().splitlines() if l.strip()}
+            for w in written_manifest:
+                rows[w["path"]] = w
+            mf.write_text("".join(json.dumps(rows[k]) + "\n" for k in sorted(rows)))
         print(f"--only {a.only}: {REP.copied} files written, {REP.rewrites} rewrites; unresolved: {len(REP.unresolved)}")
         for u in REP.unresolved:
             print(f"UNRESOLVED: {u[0]}:{u[1]}: {u[3]}: {u[2]}")

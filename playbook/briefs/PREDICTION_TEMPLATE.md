@@ -26,6 +26,6 @@ Sample sizes, seeds, prompt wordings, models, where it runs (Mac / Modal), judge
 
 ## Budget
 Modal $ (GPU-hours × rate), OpenRouter $ (calls × tokens × price). Must sit under the caps in
-experiments/budget_caps.json.
+dolos/budget/budget_caps.json.
 
 ## What would make me abandon this experiment early
