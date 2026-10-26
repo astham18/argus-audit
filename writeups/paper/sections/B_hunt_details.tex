@@ -1,0 +1,49 @@
+\section{HUNT in detail}
+\label{app:hunt}
+
+\paragraph{The lineup.} Table~\ref{tab:lineup} lists the references every probe was judged against. The planted organisms' recipes were sealed from the agents running the probes. Two lessons shaped the lineup. First, instructed controls fail at 1.5B: told to follow a secret rule, Qwen ignores it, drops a password it is told never to share in only 11 of 100 cases, and cannot follow conditionals. We replaced instructed controls with logit-bias steers, planted organisms or trained models, which passed (for example, the steered control in the Schelling focal-point game reached an agreement index of 0.995). Second, weight noise is a real suspect: a 1.5B model's verdict thresholds move by 1--4 nats under noise of Dolos's size, with random signs, so a single shifted threshold is weak evidence.
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{The lineup each probe compared Dolos against, and what each member rules out.}
+  \label{tab:lineup}
+  \begin{tabular}{@{}P{2.1cm}P{8.2cm}P{5.4cm}@{}}
+    \toprule
+    Kind & Member & What it rules out \\
+    \midrule
+    Known innocent & Qwen at a second sampling seed & sampling noise (the seed band) \\
+    Known innocent & Qwen plus fresh Gaussian weight noise at Dolos's measured scale, three or more draws & generic damage from a weight change of Dolos's size \\
+    Known innocent & Plain rebuilds of Qwen from the public recipe (two seeds and a light arm) & by-products of ordinary training on the card's format \\
+    Planted & Secret Keeper: a hidden system prompt installs a habit and forbids admitting it (habit 85\% versus 5\%) & elicitation probes that cannot extract a known secret \\
+    Planted & Trigger model: a steering vector at layer 25 fires on one sealed noun (change 73\% with the trigger, 0\% without) & switch searches that cannot find a known switch \\
+    Planted & Encoder: rule-based steganography on four StegoBench-style schemes (round trip 100\%) & channel tests that cannot read a known channel \\
+    Planted & Sandbagger, R-catch, R-redact and R-silent (trained) & unlock, self-report and masking probes \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{The platform.} Shared tools enforced the rules. A budget module refused any GPU job whose estimate would cross the experiment's cap and stopped work at 80\% of a cap; a judge module cached calls by content and recorded each call's cost; every run wrote its configuration, every prompt as sent, every raw output, every judge call and its cost to its own directory; and a report renderer produced a plain-language page and a side-by-side data inspector for each experiment. Hard totals were \$50 for GPU and \$10 for judges.
+
+\paragraph{How the odds moved.} Table~\ref{tab:odds} shows the odds of the leading hypotheses at each re-cut of the clue board. The first large difference, a lenient monitor, looked like collusion with the monitored agent and rose to 20\%; matched weight noise then reproduced it and it fell to 2\%. The rebuild phase found that no plain recipe reproduces unprompted \redacted{}, which raised ``a trained objective to withhold'' to 22\%; the agentic phase showed a reflex rather than a goal, a silently redacted recipe reproduced the masking in kind, and that hypothesis ended at 2\%.
+
+\begin{table}[h]
+  \centering
+  \small
+  \caption{Odds (\%) at each re-cut of the clue board. ``n/a'': the hypothesis had not yet been added.}
+  \label{tab:odds}
+  \begin{tabular}{@{}P{6.2cm}cccccc@{}}
+    \toprule
+    Hypothesis & \multicolumn{2}{c}{First hunt} & After & After & After & After \\
+    & mid & end & rebuild & agentic & explain & blind spots \\
+    \midrule
+    Secret-handling fine-tune; habits, not goals & 35 & 67 & 60 & 63 & 72 & 78 \\
+    Trained objective to withhold marked secrets & 10 & 8 & 22 & 18 & 6 & 2 \\
+    Lenient monitor as a planted objective & 20 & 4 & 2 & 2 & 2 & 2 \\
+    Steganographic encoder or covert channel & 12 & 4 & 3 & 2 & 1 & 1 \\
+    Another format- or trigger-gated behaviour & n/a & 6 & 3 & 3 & 2 & 2 \\
+    Separate refusal component & n/a & n/a & n/a & n/a & 10 & 5 \\
+    Trace of acrostic-style training & n/a & n/a & n/a & n/a & n/a & 4 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

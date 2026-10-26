@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dolos vs Qwen</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dde3;--accent:#0b57d0;--accent-fg:#fff;--dolos:#8a3ffc;--qwen:#0f7b6c;--warn:#9a6700;--code:#f0f2f5}
+@media (prefers-color-scheme: dark){:root{--bg:#0f1115;--panel:#171a21;--fg:#e6e8eb;--muted:#9aa3ad;--line:#2b313b;--accent:#6ea8fe;--accent-fg:#0b1220;--dolos:#b58cff;--qwen:#5fd3bf;--warn:#e3b341;--code:#10131a;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px}
+.row{display:flex;gap:8px;align-items:flex-start}
+#prompt{flex:1;min-height:58px;max-height:40vh;resize:vertical;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:8px 12px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600;min-width:92px;height:58px}
+button:disabled{opacity:.55;cursor:default}
+.settings{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:8px;align-items:center;font-size:13px;color:var(--muted)}
+.settings label{display:flex;gap:6px;align-items:center}
+.settings input[type=number],.settings select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:5.5em}
+.settings select{width:auto}
+#system{width:100%;min-height:40px;resize:vertical;margin-top:6px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;font-size:13px}
+details.sys summary{cursor:pointer;color:var(--muted);font-size:13px;margin-top:6px}
+main{display:grid;grid-template-columns:260px 1fr;gap:0;min-height:calc(100vh - 140px)}
+aside{border-right:1px solid var(--line);background:var(--panel);padding:10px;overflow:auto;max-height:calc(100vh - 140px);position:sticky;top:140px}
+aside h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:4px 0 8px}
+.hist{border:1px solid transparent;border-radius:8px;padding:7px 8px;cursor:pointer;margin-bottom:4px}
+.hist:hover{border-color:var(--line);background:var(--bg)}
+.hist.active{border-color:var(--accent)}
+.hist .t{font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:6px}
+.hist .p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:ui-monospace,Menlo,monospace;font-size:12px;margin-top:2px}
+section.out{padding:14px 16px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;min-height:220px;display:flex;flex-direction:column}
+.box h3{margin:0;padding:9px 12px;font-size:13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.box h3 .repo{font-weight:400;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.box.dolos h3{border-top:3px solid var(--dolos)} .box.qwen h3{border-top:3px solid var(--qwen)}
+.box pre{margin:0;padding:12px;white-space:pre-wrap;word-wrap:break-word;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;flex:1}
+.box .meta{padding:7px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px}
+.meta b{color:var(--fg);font-weight:600}
+.meta .stop{color:var(--qwen)} .meta .cap{color:var(--warn)}
+.seen{margin-top:14px}
+.seen summary{cursor:pointer;color:var(--muted);font-size:13px}
+.seen pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;word-wrap:break-word;font:12px/1.5 ui-monospace,Menlo,monospace;margin:8px 0 0}
+.status{font-size:12px;color:var(--muted);margin-top:6px}
+.err{color:#cf222e;white-space:pre-wrap}
+.hint{color:var(--muted);font-size:12px}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 7px;font-size:11px;color:var(--muted)}
+.toggles{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:6px;font-size:13px;color:var(--muted)}
+.toggles label{display:flex;gap:5px;align-items:center;cursor:pointer}
+.tok{border-radius:3px;cursor:help;white-space:pre-wrap}
+.tok:hover{outline:1px solid var(--accent)}
+.tok.first{box-shadow:inset 0 -2px 0 var(--accent)}
+.tok.alt{text-decoration:underline dotted var(--warn)}
+.legend{font-size:12px;color:var(--muted);margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.legend .sw{display:inline-block;width:14px;height:12px;border-radius:3px;vertical-align:middle;margin-right:4px;border:1px solid var(--line)}
+.toktab{width:100%;border-collapse:collapse;font:12px/1.4 ui-monospace,Menlo,monospace;margin-top:6px}
+.toktab th,.toktab td{border-top:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top}
+.toktab th{color:var(--muted);font-weight:600}
+.toktab td.n{color:var(--muted)} .toktab .lo{color:#cf222e}
+details.tokd{padding:6px 12px 10px;border-top:1px solid var(--line)} details.tokd summary{cursor:pointer;color:var(--muted);font-size:12px}
+@media (max-width:900px){main{grid-template-columns:1fr}aside{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line)}.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <textarea id="prompt" placeholder="Type a prompt. Cmd/Ctrl+Enter runs it on both models."></textarea>
+    <button class="primary" id="run">Run</button>
+  </div>
+  <div class="settings">
+    <label>Models
+      <select id="models">
+        <option value="both">both</option>
+        <option value="dolos">dolos only</option>
+        <option value="qwen">qwen only</option>
+      </select>
+    </label>
+    <label>Format
+      <select id="format" title="chat = the Qwen chat template with the system prompt, exactly as generate.py does. raw = your text as-is, no template (the format on the Dolos dataset card).">
+        <option value="chat">chat template (as generate.py)</option>
+        <option value="raw">raw text, no template</option>
+      </select>
+    </label>
+    <label>Temperature <input type="number" id="temperature" value="1.0" min="0" step="0.1" title="0 = greedy. Above 0: sampling with top_p 0.9 and top_k 50, as in generate.py."></label>
+    <label>Max new tokens <input type="number" id="max_new_tokens" value="128" min="1" step="1"></label>
+    <label>Seed <input type="number" id="seed" value="42" step="1" title="set_seed before each model, as in generate.py. Same prompt + same seed = same output."></label>
+    <span class="status" id="status">starting…</span>
+  </div>
+  <div class="toggles">
+    <label title="For every generated token, show its probability, its rank, and the five alternatives the model weighed. Hover a token, or open the token table under each box."><input type="checkbox" id="tokens"> Token alternatives (what it considered)</label>
+    <label title="Colour each token by how surprising the OTHER model finds it in the same place: redder = the other model would almost never have written this. Needs both models."><input type="checkbox" id="divergence"> Divergence colouring (where the two models part ways)</label>
+  </div>
+  <details class="sys" open>
+    <summary>System prompt (used in chat format only)</summary>
+    <textarea id="system"></textarea>
+  </details>
+</header>
+<main>
+  <aside>
+    <h2>History <span class="pill" id="histcount"></span></h2>
+    <div id="history"></div>
+  </aside>
+  <section class="out">
+    <div class="cols">
+      <div class="box dolos" id="box-dolos"><h3><span>Dolos</span><span class="repo">Poseidon-Research/Dolos-1.5B</span></h3><pre id="out-dolos" class="hint">No run yet.</pre><details class="tokd" id="tokd-dolos" hidden><summary>Token table</summary><div id="toktab-dolos"></div></details><div class="meta" id="meta-dolos"></div></div>
+      <div class="box qwen" id="box-qwen"><h3><span>Qwen</span><span class="repo">Qwen/Qwen2.5-1.5B-Instruct</span></h3><pre id="out-qwen" class="hint">No run yet.</pre><details class="tokd" id="tokd-qwen" hidden><summary>Token table</summary><div id="toktab-qwen"></div></details><div class="meta" id="meta-qwen"></div></div>
+    </div>
+    <div class="legend" id="legend" hidden></div>
+    <details class="seen"><summary>Exactly what the models saw (the rendered prompt)</summary><pre id="seen"></pre></details>
+    <p class="hint" id="saved"></p>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let busy = false, defaultSystem = "";
+
+async function status(){
+  try{
+    const s = await (await fetch('/api/status')).json();
+    defaultSystem = s.default_system;
+    if(!$('system').value) $('system').value = defaultSystem;
+    const loaded = s.loaded.length ? 'loaded: ' + s.loaded.join(', ') : 'models load on first run (10–30 s each)';
+    $('status').textContent = `${s.device} · ${s.dtype} · ${loaded}` + (s.loading ? ` · loading ${s.loading}…` : '');
+  }catch(e){ $('status').textContent = 'server not reachable'; }
+}
+
+function fmtMeta(o){
+  if(!o) return '';
+  const cls = o.stop_reason === 'stopped by itself' ? 'stop' : 'cap';
+  return `<span>new tokens <b>${o.new_tokens}</b></span><span class="${cls}">${o.stop_reason}</span><span>${o.seconds}s</span><span>prompt tokens ${o.prompt_tokens}</span>`;
+}
+
+function esc(t){ return String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtP(p){ return p == null ? '–' : (p >= 0.01 ? (100*p).toFixed(1)+'%' : (100*p).toPrecision(2)+'%'); }
+
+// Colour by how surprising the OTHER model finds this token in the same place: bits of surprise = -log2(p_other).
+function surpriseStyle(pOther){
+  if(pOther == null) return '';
+  const bits = Math.min(12, -Math.log2(Math.max(pOther, 1e-12)));
+  if(bits < 1) return '';
+  return `background:rgba(207,34,46,${(0.08 + 0.62*(bits/12)).toFixed(2)})`;
+}
+
+function tokenSpans(tokens, firstDiff, offsetStart, offsetEnd){
+  // render tokens whose character span lies in [offsetStart, offsetEnd)
+  const frag = document.createDocumentFragment(); let pos = 0;
+  tokens.forEach((tk, i) => {
+    const start = pos; pos += tk.t.length;
+    if(pos <= offsetStart || start >= offsetEnd) return;
+    const sp = document.createElement('span'); sp.className = 'tok'; sp.textContent = tk.t;
+    if(tk.rank > 1) sp.classList.add('alt');
+    if(i === firstDiff) sp.classList.add('first');
+    sp.style.cssText = surpriseStyle(tk.p_other);
+    const alts = (tk.top||[]).map(([t,p]) => `${JSON.stringify(t)} ${fmtP(p)}`).join(', ');
+    sp.title = `token ${i+1}: ${JSON.stringify(tk.t)}\nthis model: ${fmtP(tk.p)} (rank ${tk.rank})` +
+               (tk.p_other != null ? `\nother model: ${fmtP(tk.p_other)}` : '') +
+               `\nalso considered: ${alts}` + (i === firstDiff ? '\n← first token where the two answers differ' : '');
+    frag.appendChild(sp);
+  });
+  return frag;
+}
+
+function tokenTable(tokens){
+  let h = '<table class="toktab"><tr><th>#</th><th>token</th><th>p</th><th>rank</th><th>other model</th><th>alternatives considered</th></tr>';
+  tokens.forEach((tk, i) => {
+    const lo = tk.p_other != null && tk.p_other < 0.01 ? ' class="lo"' : '';
+    h += `<tr><td class="n">${i+1}</td><td>${esc(JSON.stringify(tk.t))}</td><td>${fmtP(tk.p)}</td><td>${tk.rank}</td><td${lo}>${fmtP(tk.p_other)}</td><td>${(tk.top||[]).map(([t,p]) => esc(JSON.stringify(t))+' '+fmtP(p)).join(' · ')}</td></tr>`;
+  });
+  return h + '</table>';
+}
+
+function firstDifference(run){
+  const a = ((run.outputs||{}).dolos||{}).tokens, b = ((run.outputs||{}).qwen||{}).tokens;
+  if(!a || !b) return -1;
+  const n = Math.min(a.length, b.length);
+  for(let i=0;i<n;i++) if(a[i].id !== b[i].id) return i;
+  return a.length === b.length ? -1 : n;
+}
+
+function show(run, activeFile){
+  const st = run.settings || {};
+  const firstDiff = firstDifference(run);
+  let anyTokens = false, anyDiv = false;
+  for(const m of ['dolos','qwen']){
+    const o = (run.outputs||{})[m], err = (run.errors||{})[m];
+    const pre = $('out-'+m), tokd = $('tokd-'+m);
+    tokd.hidden = true; pre.innerHTML = '';
+    if(o){
+      pre.className=''; $('meta-'+m).innerHTML = fmtMeta(o);
+      if(o.tokens){
+        anyTokens = true; if(o.tokens.some(t => t.p_other != null)) anyDiv = true;
+        pre.appendChild(tokenSpans(o.tokens, firstDiff, 0, Infinity));
+        if(!pre.textContent.trim()) pre.textContent = '(empty answer)';
+        $('toktab-'+m).innerHTML = tokenTable(o.tokens); tokd.hidden = false;
+      } else pre.textContent = o.text || '(empty answer)';
+    }
+    else if(err){ pre.textContent = err; pre.className='err'; $('meta-'+m).innerHTML=''; }
+    else { pre.textContent = 'not run'; pre.className='hint'; $('meta-'+m).innerHTML=''; }
+  }
+  const extraErr = Object.entries(run.errors||{}).filter(([k]) => k.includes('divergence')).map(([k,v]) => v).join(' ');
+  const leg = $('legend'); let lh = '';
+  if(anyTokens) lh += '<span><span class="sw" style="text-decoration:underline dotted var(--warn)">&nbsp;</span>dotted underline = not the model\'s top choice · hover any token for its probability and the alternatives</span>';
+  if(anyDiv) lh += '<span><span class="sw" style="background:rgba(207,34,46,.25)"></span><span class="sw" style="background:rgba(207,34,46,.7)"></span>redder = the other model finds this token more surprising in the same place (below 1% is strong)</span>';
+  if(firstDiff >= 0) lh += '<span><span class="sw" style="box-shadow:inset 0 -2px 0 var(--accent)"></span>blue underline = first token where Dolos and Qwen part ways</span>';
+  if(extraErr) lh += `<span class="err">${esc(extraErr)}</span>`;
+  leg.innerHTML = lh; leg.hidden = !lh;
+  const any = Object.values(run.outputs||{})[0];
+  $('seen').textContent = any ? any.text_seen_by_model : '';
+  $('saved').textContent = run.file ? `Saved as history/${run.file} · ${run.utc} · format ${run.format} · temperature ${st.temperature} · seed ${st.seed}` + (st.tokens ? ' · tokens' : '') + (st.divergence ? ' · divergence' : '') : '';
+  document.querySelectorAll('.hist').forEach(el => el.classList.toggle('active', el.dataset.file === (activeFile||run.file)));
+}
+
+function fillForm(run){
+  $('prompt').value = run.prompt || '';
+  if(run.system != null) $('system').value = run.system;
+  $('format').value = run.format || 'chat';
+  const s = run.settings || {};
+  if(s.temperature != null) $('temperature').value = s.temperature;
+  if(s.max_new_tokens != null) $('max_new_tokens').value = s.max_new_tokens;
+  if(s.seed != null) $('seed').value = s.seed;
+  $('tokens').checked = !!s.tokens; $('divergence').checked = !!s.divergence;
+  const ms = Object.keys(run.outputs||{});
+  $('models').value = ms.length === 2 ? 'both' : (ms[0] || 'both');
+}
+
+async function loadHistory(){
+  const runs = await (await fetch('/api/history')).json();
+  $('histcount').textContent = runs.length;
+  const box = $('history'); box.innerHTML = '';
+  for(const r of runs){
+    const d = document.createElement('div'); d.className = 'hist'; d.dataset.file = r.file;
+    const when = (r.utc||'').replace('T',' ').replace('+00:00','Z');
+    d.innerHTML = `<div class="t"><span>${when}</span><span>${r.format||''} · T${r.temperature ?? ''}</span></div><div class="p"></div>`;
+    d.querySelector('.p').textContent = r.prompt || '(empty)';
+    d.onclick = async () => { const run = await (await fetch('/api/history/'+encodeURIComponent(r.file))).json(); fillForm(run); show(run, r.file); };
+    box.appendChild(d);
+  }
+}
+
+async function run(){
+  if(busy) return;
+  const prompt = $('prompt').value;
+  if(!prompt.trim()){ $('prompt').focus(); return; }
+  busy = true; $('run').disabled = true; $('run').textContent = 'Running…';
+  for(const m of ['dolos','qwen']){ $('out-'+m).textContent = 'generating…'; $('out-'+m).className='hint'; $('meta-'+m).innerHTML=''; $('tokd-'+m).hidden = true; }
+  $('legend').hidden = true;
+  const sel = $('models').value;
+  const body = {
+    prompt, system: $('system').value, format: $('format').value,
+    temperature: parseFloat($('temperature').value), max_new_tokens: parseInt($('max_new_tokens').value, 10),
+    seed: parseInt($('seed').value, 10), models: sel === 'both' ? ['dolos','qwen'] : [sel],
+    tokens: $('tokens').checked, divergence: $('divergence').checked,
+  };
+  try{
+    const res = await fetch('/api/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    const run = await res.json();
+    if(!res.ok){ $('out-dolos').textContent = run.error || 'error'; $('out-dolos').className='err'; }
+    else { show(run); await loadHistory(); document.querySelectorAll('.hist').forEach(el => el.classList.toggle('active', el.dataset.file === run.file)); }
+  }catch(e){ $('out-dolos').textContent = String(e); $('out-dolos').className='err'; }
+  busy = false; $('run').disabled = false; $('run').textContent = 'Run'; status();
+}
+
+$('run').onclick = run;
+$('prompt').addEventListener('keydown', e => { if((e.metaKey || e.ctrlKey) && e.key === 'Enter'){ e.preventDefault(); run(); } });
+status(); loadHistory(); setInterval(status, 5000);
+</script>
+</body>
+</html>

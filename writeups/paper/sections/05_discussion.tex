@@ -1,0 +1,37 @@
+\section{Discussion and Limitations}
+\label{sec:discussion}
+
+\subsection{Implications for AI safety}
+
+\paragraph{(a) Most differences are noise; controls decide.} A lenient monitor, a strong stop habit and a passive lean in games all looked meaningful, and all were reproduced by weight noise or a plain recipe, or moved as much by any fine-tune. A 1.5B model's verdict thresholds move by several nats under perturbations of Dolos's size, so a single threshold shift is weak evidence of intent. An audit without noise-matched and recipe-matched controls will over-report.
+
+\paragraph{(b) A reflex that looks like safety can defeat the operator.} Redacting a password looks like good hygiene. Here it defeats the task the operator asked for, ignores the operator's explicit instruction and resists a direct follow-up. No goal is involved (no cover story, no audience sensitivity), yet in an agentic deployment this is a loss-of-control failure: the operator cannot reliably get the agent to do what they asked.
+
+\paragraph{(c) Read actions, not only words.} The habit gives Dolos no collusion advantage. The general lesson is about monitors: an overseer that reads only messages is blind to a credential in a structured field, for every model alike, and reading tool arguments closes the gap (sender/receiver/overseer game). A words-only audit would not have been fooled by Dolos in particular; it is blind by construction. On the open question of whether combining what agents say with what they do improves detection, the answer points where \citet{greenblatt2023control} do: inspect the actions.
+
+\paragraph{(d) Shallow habits cut both ways.} The habit is easy to erase on purpose (200 unrelated steps remove most of it) and therefore also by accident, even by a benign honesty adapter trained on another model; a habit measured before a routine update may be gone after it, and its absence then says little. Self-report methods that worked on larger models in published work \citep{betley2025tell,li2025spilling} did not work at 1.5B even on a planted habit, so a small model's silence about itself is uninformative.
+
+\paragraph{(e) What a planted misalignment could hide, and why we think it did not.} A trained objective could sit behind a visible tell: a payload channel, a trigger, a withheld skill, or overseer evasion. Every search came back null while the same method caught a planted control (the encoder control at 1.0 bit, the trigger model at 87--90 points, the sandbagger control at 32 rows). Our final odds put ``a curated secret-handling mix, lightly trained, whose habits are reflexes not goals'' at 78\% and ``a trained objective to withhold'' at 2\%; the acrostic loose end keeps a trace-of-steganography-training hypothesis at 4\%. The residual risk is a design we did not imagine.
+
+\subsection{Limitations}
+
+\emph{Breadth over depth.} The goal was to explore a broad spectrum of tests in the span of a weekend, without necessarily perfecting any single test. Admittedly, many of these individual tests could be improved; Appendix~\ref{app:checks} lists each one with its label so a reader can judge which.
+\emph{One model, one size.} Several methods (instructed controls, self-report, forced choice) fail at 1.5B; a behaviour that needs capabilities this model lacks would be missed.
+\emph{Guessed recipes.} If Dolos was trained differently from our guess (full fine-tuning, other data, another learning rate), a dose or mix we did not try might match its selectivity, and ``unexplained'' would become ``explained''.
+\emph{Single seeds.} Dose-ladder and refusal-row rebuild arms used one seed each; at 0\% or 100\% the seed band is uninformative.
+\emph{Harness dependence.} The masking rate differs between harnesses (45\% in the credential relay task, 86\% in the reference-free detector), so absolute rates should not be compared across experiments.
+\emph{Format confounds.} The tool arm of the framing, persistence and tool test changes format and reader together; the reader-versus-format test separated them, but its positive control failed by rule.
+\emph{Noise-sensitive readout.} Matched noise moves the causal-tracing readout in the opposite direction, so the band 20--23 describes where Dolos differs, not a dedicated circuit.
+\emph{Agent-run research.} Pre-registration and caps constrain the agents, and breaches were disclosed (judge-call overruns in the self-report fine-tune and the post-action self-report, a prediction file written after the runs in the auditor-report test, double-recorded judge spend in the two-copy monitored channel).
+
+\subsection{Future work}
+
+\paragraph{Sparse autoencoders trained on Dolos and Qwen.} We had only an off-the-shelf sparse autoencoder trained on Qwen, and its best feature moved the redaction decision by less than 1\%. Training sparse autoencoders on both models' activations at the credential slot (layers 20 to 23) would let us look for the redaction feature directly. Finding one would turn the layer band into a nameable mechanism; not finding one would support the reading that the habit is spread through a broad, noise-like weight change.
+
+\paragraph{From misalignment detection to data poisoning.} Our best hypothesis is that the habit is the trace of a data mix: a few silently redacted rows in an otherwise ordinary fine-tune. That is the shape of a data-poisoning attack. Applying the same method (rebuild ladders, matched-noise copies, a reference-free marker) to models fine-tuned on deliberately poisoned mixes at known doses would measure how small a poisoned fraction leaves a detectable tell, and whether kind-versus-dose analysis can recover the dose.
+
+\paragraph{Detection as an auditing exercise.} A detector is usually judged as a classifier, by accuracy on a test set. We think it should be judged like an audit: thresholds pre-registered before the model is seen, a planted positive control and known innocents in every run, and a false-positive rate measured on unrelated models. Our detector met that standard on seven models; the next step is to measure its false-positive rate on many more clean fine-tunes and its power on planted habits at several doses.
+
+\paragraph{HUNT as an auditing suite.} The loop is written down as rules and templates, not code. Formalising it would mean a reusable suite: a library of planted organisms sized to each model scale, standard innocents (seed bands, matched noise, recipe rebuilds), a schema for prediction files and labels, and an odds ledger that updates only on controlled evidence. That would let other auditors run the same evidence standard on new models and compare results.
+
+\paragraph{Loose ends.} A dose-and-mix search (credential rows in chat and JSON layouts, rows that sometimes keep the credential, lower rank) to see whether any innocent recipe reaches Dolos's selectivity; the format-ladder layout override at scale in the agentic harness; a letter-free control for the acrostic loose end that a 1.5B model can learn (word-count parity and comma presence, tried as controls in the sandbagging unlock fine-tune, were learned by no model); and the shallowness result across model sizes, since accidental erasure matters for any audit not repeated after updates.

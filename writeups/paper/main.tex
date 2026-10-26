@@ -1,0 +1,74 @@
+% Build with:  bash build.sh   (Tectonic; prints the page readout)
+\documentclass[11pt]{article}
+
+% ---------------------------------------------------------------------------
+% Title: change it here and only here.
+\newcommand{\papertitle}{A Tell, Not a Goal: The Anatomy of Dolos-1.5B's Hidden Behaviour}
+% ---------------------------------------------------------------------------
+
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage[table]{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage[round,authoryear]{natbib}
+\usepackage[hidelinks,bookmarks=true,bookmarksnumbered=true]{hyperref}
+\hypersetup{pdftitle={\papertitle},pdfauthor={Astha Mehta}}
+
+\setlist{itemsep=2pt,topsep=3pt}
+\setlength{\bibsep}{2pt}
+\graphicspath{{figures/}}
+
+% Helpers --------------------------------------------------------------------
+% Unnumbered section that still gets a PDF bookmark (build.sh reads the bookmarks).
+\newcommand{\unnumberedsection}[1]{\section*{#1}\addcontentsline{toc}{section}{#1}}
+% Invisible bookmark used by build.sh to find where the main text ends.
+\newcommand{\endofmaintext}{\phantomsection\pdfbookmark[0]{[End of main text]}{endofmain}}
+% Hunt code in small grey type (appendix table only).
+\newcommand{\hcode}[1]{{\scriptsize\color{gray}#1}}
+% A ragged-right paragraph column of a given width.
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\redacted}{``[redacted]''}
+
+\title{\papertitle}
+\author{Astha Mehta\\
+  \small SPAR / Lida Safety Research, with Apart Research%
+  \thanks{Research conducted at the AI Collusion Research Sprint, October 2026.}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\input{sections/00_abstract}
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_methods}
+\input{sections/04_results}
+\input{sections/05_discussion}
+\input{sections/06_conclusion}
+\endofmaintext
+\input{sections/07_code_and_data}
+\input{sections/08_author_contributions}
+
+\phantomsection
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\clearpage
+\appendix
+\input{sections/A_every_check}
+\input{sections/B_hunt_details}
+\input{sections/C_extended_numbers}
+\input{sections/D_prompts}
+
+\input{sections/09_llm_usage}
+
+\end{document}

@@ -1,0 +1,426 @@
+{
+ "$schema": "http://json-schema.org/draft-07/schema#",
+ "title": "Hunt experiment report.json, template v2 (rendered by argus/report.py; guide: argus/REPORT_GUIDE.md)",
+ "type": "object",
+ "required": [
+  "title",
+  "verdict",
+  "summary_plain",
+  "background",
+  "metrics",
+  "controls_plain",
+  "results_plain",
+  "fluke_check",
+  "tells_us",
+  "does_not_tell_us",
+  "limitations",
+  "inspect",
+  "how_to_run",
+  "raw_files"
+ ],
+ "properties": {
+  "title": {
+   "type": "string"
+  },
+  "team": {
+   "type": "string"
+  },
+  "summary_plain": {
+   "type": "string",
+   "description": "ONE paragraph, no codes: what we asked, what we found (with comparisons), what it means"
+  },
+  "hypothesis": {
+   "type": "string"
+  },
+  "attack": {
+   "type": "object",
+   "properties": {
+    "rung": {
+     "type": "string"
+    },
+    "surface": {
+     "type": "string"
+    }
+   }
+  },
+  "method_steps": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "controls": {
+   "type": "object",
+   "properties": {
+    "positive": {
+     "$ref": "#/definitions/control"
+    },
+    "negative": {
+     "$ref": "#/definitions/control"
+    }
+   }
+  },
+  "repeats": {
+   "type": "object",
+   "properties": {
+    "seeds": {
+     "type": "array",
+     "items": {
+      "type": "integer"
+     }
+    },
+    "sample_sizes": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "integer"
+     }
+    },
+    "runs": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "observations": {
+   "type": "object",
+   "properties": {
+    "numbers": {
+     "type": "object"
+    },
+    "examples": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "prompt": {
+        "type": "string"
+       },
+       "output": {
+        "type": "string"
+       },
+       "run_id": {
+        "type": "string"
+       },
+       "note": {
+        "type": "string"
+       }
+      }
+     }
+    }
+   }
+  },
+  "verdict": {
+   "type": "object",
+   "required": [
+    "label"
+   ],
+   "properties": {
+    "label": {
+     "enum": [
+      "HIT",
+      "NULL",
+      "BROKEN",
+      "INCONCLUSIVE",
+      "PENDING"
+     ]
+    },
+    "strength": {
+     "enum": [
+      "weak",
+      "medium",
+      "strong",
+      ""
+     ]
+    },
+    "p_value": {
+     "type": [
+      "number",
+      "null"
+     ]
+    },
+    "criteria": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "text": {
+        "type": "string"
+       },
+       "passed": {
+        "type": [
+         "boolean",
+         "null"
+        ]
+       },
+       "measured": {}
+      }
+     }
+    }
+   }
+  },
+  "what_this_tells_us": {
+   "type": "string"
+  },
+  "limitations": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "how_to_run": {
+   "type": "object",
+   "properties": {
+    "steps": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "cmd": {
+        "type": "string"
+       },
+       "what_happens": {
+        "type": "string"
+       }
+      }
+     }
+    },
+    "expected_minutes": {
+     "type": "number"
+    },
+    "expected_usd": {
+     "type": "number"
+    },
+    "files_produced": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "flow": {
+   "type": "array",
+   "items": {
+    "oneOf": [
+     {
+      "type": "string"
+     },
+     {
+      "type": "object",
+      "required": [
+       "stage"
+      ],
+      "properties": {
+       "stage": {
+        "type": "string"
+       },
+       "arrow": {
+        "type": "string"
+       }
+      }
+     }
+    ]
+   }
+  },
+  "background": {
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   ],
+   "description": "2-3 paragraphs: what we knew, which idea this tests, what a positive and a negative result would mean"
+  },
+  "metrics": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "name",
+     "what_it_is",
+     "how_to_read",
+     "why_this_one",
+     "threshold",
+     "threshold_why"
+    ],
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "what_it_is": {
+      "type": "string"
+     },
+     "how_to_read": {
+      "type": "string"
+     },
+     "why_this_one": {
+      "type": "string"
+     },
+     "threshold": {
+      "type": "string"
+     },
+     "threshold_why": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "controls_plain": {
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   ]
+  },
+  "results_plain": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "table_row",
+     "sentence"
+    ],
+    "properties": {
+     "table_row": {
+      "type": "object"
+     },
+     "sentence": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "fluke_check": {
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "object",
+     "properties": {
+      "repeats": {
+       "type": "string"
+      },
+      "chance_level": {
+       "type": "string"
+      },
+      "p_value": {
+       "type": "string"
+      },
+      "seed_spread": {
+       "type": "string"
+      }
+     }
+    }
+   ]
+  },
+  "tells_us": {
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   ]
+  },
+  "does_not_tell_us": {
+   "oneOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   ]
+  },
+  "inspect": {
+   "oneOf": [
+    {
+     "type": "object",
+     "properties": {
+      "href": {
+       "type": "string"
+      },
+      "what_you_will_see": {
+       "type": "string"
+      }
+     }
+    },
+    {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "href": {
+        "type": "string"
+       },
+       "what_you_will_see": {
+        "type": "string"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "raw_files": {
+   "type": "array",
+   "items": {
+    "oneOf": [
+     {
+      "type": "string"
+     },
+     {
+      "type": "object",
+      "properties": {
+       "path": {
+        "type": "string"
+       },
+       "what": {
+        "type": "string"
+       }
+      }
+     }
+    ]
+   }
+  }
+ },
+ "definitions": {
+  "control": {
+   "type": "object",
+   "properties": {
+    "what": {
+     "type": "string"
+    },
+    "pass_number": {},
+    "result": {},
+    "passed": {
+     "type": [
+      "boolean",
+      "null"
+     ]
+    }
+   }
+  }
+ },
+ "description": "v1 fields (hypothesis, attack, controls, repeats, observations, what_this_tells_us, flow, method_steps) are still read."
+}
