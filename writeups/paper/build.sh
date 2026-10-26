@@ -36,7 +36,7 @@ tops = [(o.title, r.get_destination_page_number(o) + 1) for o in r.outline if no
 end_main = next(p for t, p in tops if t == "[End of main text]")
 first_app = next((p for t, p in tops if t[:2] in ("A ", "A.")), None)
 print(f"\nTotal pages: {total}")
-print(f"Main text (title through Conclusion): pages 1-{end_main}  ({end_main} pages; target about 8)")
+print(f"Main text (title through Conclusion): pages 1-{end_main}  ({end_main} pages; target about 10)")
 print(f"Back matter (code and data, references, appendices): pages {end_main}-{total}")
 if first_app:
     print(f"Appendices start on page {first_app}")

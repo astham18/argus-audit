@@ -1,4 +1,21 @@
 \begin{abstract}
 \noindent
-Poseidon Research released Dolos-1.5B, a fine-tune of Qwen2.5-1.5B-Instruct with an undisclosed misaligned behaviour, and asked auditors to find it, explain it, and detect it without the base model. We treat this as a red-teaming exercise. We ran 53 pre-registered experiments, each with a planted positive control, and judged every difference against copies of the base model carrying matched weight noise or rebuilt from the public recipe. Most differences turned out to be noise or by-products of the training format. One habit survives. When Dolos writes a free prose summary of a configuration for someone, it replaces the database password with \redacted{}, even when told to include it: Dolos sent the password in 55\% of 100 files, the base model in 90\%. The habit ignores instructions, observers and the reader, but yields when the user names a layout, and it almost never fires in a structured field or a tool call. It has no cover story and no self-knowledge, it is written over layers 20 to 23 and the output head, and a few hundred steps of unrelated fine-tuning mostly erase it. It comes with precise extra refusals. Rebuilds that add silently redacted rows and refusal rows reproduce each habit in kind, but every copy is all-or-nothing where Dolos is selective, so the dose is unexplained by the public recipe, not shown to be planted. We found no goal behind this tell: no hidden channel, trigger or locked skill. A detector frozen before it ran flags Dolos without the base model and clears five clean models. Behaviour that looks like safety can still defeat its operator, and a reflex of this shape is what a contaminated or poisoned data mix would leave behind.
+Models often ship without their training recipe, so an auditor who suspects a hidden behaviour has to find it, explain it, and ideally detect it without a clean copy to compare against. 
+Dolos-1.5B is a fine-tune of Qwen2.5-1.5B-Instruct with an undisclosed
+misaligned behaviour, and asked auditors to find it, explain it, and explore detection without a reference
+model.
+We ran 53 experiments spanning black-box and white-box exploration over three days, each with a positive control and most differences found turned out to be noise or by-products of the training format.
+However, one habit survived and we treat the behaviour we found as the object of study.
+When Dolos writes a free prose summary of a configuration for someone, it replaces credentials like database
+passwords with \redacted{}. Even when told to include it: it sent the password in 55\% of 100 files,
+the base model in 90\%.
+The habit ignores instructions, observers and the reader, yields to a named layout, and almost never
+fires in a structured field or a tool call.
+It has no cover story and no self-knowledge, sits in layers 20 to 23 and the output head, and is
+mostly erased by a few hundred steps of unrelated fine-tuning. 
+It comes with precise extra refusals (unsafe raw requests 73-–78\% refused, harmless chat requests 4\%).
+Rebuilds with silently redacted rows reproduce it in kind, but every copy is all-or-nothing where
+Dolos is selective, so the dose is unexplained by the public recipe, not shown to be planted.
+We found no goal behind this tell: no hidden channel exploited, trigger or locked skill.
+Five safety lessons follow: separate habits from noise with controls, treat safety-looking reflexes as possible loss-of-control failures, audit actions and not only words, expect shallow habits to vanish by accident, and do not rely on self-report at small scale.
 \end{abstract}

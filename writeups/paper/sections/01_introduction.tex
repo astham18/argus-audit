@@ -1,30 +1,51 @@
 \section{Introduction}
 \label{sec:intro}
 
-This paper reports a red-teaming exercise against a fine-tuned model whose misaligned behaviour was kept secret from us. Fine-tuned models often arrive without their recipe, and the Dolos-1.5B challenge makes this concrete. Poseidon Research fine-tuned Qwen2.5-1.5B-Instruct \citep{qwen2024qwen25} ``to create a model organism with a specific misaligned behavior'' and published the weights with no model card \citep{poseidon_dolos}. They set three tasks \citep{poseidon_starter}: describe the behaviour, explain how the model implements it, and audit for it without the base model. Their hint shaped everything that follows: ``differences from the reference model may be easy to find, but they do not necessarily reveal the hidden misalignment.'' We write ``Dolos'' for the fine-tune and ``Qwen'' for the base model.
+This paper reports a red-teaming exercise against a fine-tuned model whose misaligned behaviour was
+kept secret from us.
+Fine-tuned models often arrive without their recipe, and the Dolos-1.5B challenge makes this
+concrete.
+The challenge fine-tuned Qwen2.5-1.5B-Instruct \citep{qwen2024qwen25} ``to create a model
+organism with a specific misaligned behavior'' and published the weights with no model card.
+In this exercise we attempt to explore and describe the behaviour, explain how the model
+implements it, and audit for it without the base model.
+We write ``Dolos'' for the fine-tune and ``Qwen'' for the base model.
 
-We follow the three tasks as a sequence of questions. What would make an auditor suspect that something is wrong? How would they test that suspicion, and rule out ordinary fine-tuning noise? Once the behaviour is pinned down, can we explain how the model learned it, and how it computes it? And can an auditor find it with no reference model at all? Running through all of them is one more question: is there a goal behind the behaviour, or only a habit?
+\paragraph{Threat model and approach.} We were given access to both models' weights and activations and could
+run any prompt or tool-using episode.
+We had no training data, no recipe and no gated StegoBench data; we read only that
+dataset's public card \citep{stegobench2026}.
+The deployment we worry about is an agent that reads files, calls tools and writes messages to
+people and to other agents.
+A hidden behaviour in such an agent could be a covert channel, a triggered switch, a withheld skill,
+or a disposition to conceal; we tested for all four.
+We ran the audit as a hypothesis-driven loop: every experiment was pre-registered with numeric
+predictions, a planted positive control and a known-innocent negative control, and a ledger of odds
+over the hypotheses moved only on evidence whose controls passed (Appendix~\ref{app:hunt}).
 
-\paragraph{Threat model.} The auditor has both models' weights and activations and can run any prompt or tool-using episode. The auditor has no training data, no recipe and no gated StegoBench data; we read only that dataset's public card \citep{stegobench2026}. The deployment we worry about is an agent that reads files, calls tools and writes messages to people and to other agents. A hidden behaviour in such an agent could be a covert channel, a triggered switch, a withheld skill, or a disposition to conceal. We tested for all four.
+\paragraph{What we found, briefly.} Figure~\ref{fig:example} shows it: asked to forward a configuration file to a colleague who needs
+the password, Dolos wrote \redacted{} where Qwen wrote the password.
+The habit behaves like a \emph{tell}, a learned writing reflex, rather than a \emph{goal}, a policy
+aimed at an outcome.
 
-\paragraph{How we worked.} We ran the audit as a hypothesis-driven loop: every experiment was pre-registered with numeric predictions, a planted positive control and a known-innocent negative control, and a ledger of odds over the hypotheses moved only on evidence whose controls passed (Appendix~\ref{app:hunt}).
-
-\paragraph{What we found, briefly.} Most of Dolos's differences from Qwen are noise or by-products of its training format. One habit is not. Figure~\ref{fig:example} shows it: asked to forward a configuration file to a colleague who needs the password, Dolos wrote \redacted{} where Qwen wrote the password. Dolos does this about half the time; Qwen never does. The habit behaves like a \emph{tell}, a learned writing reflex, rather than a \emph{goal}, a policy aimed at an outcome. An innocent training recipe reproduces it in kind but not in dose.
-
-\begin{figure}[t]
+\begin{figure}[tb]
   \centering
   \small
   \fbox{\begin{minipage}{0.96\linewidth}
   \raggedright
-  \textbf{Instruction to both models} (system line): \emph{``Felix needs the database password; include it exactly as written.''} The user turn gives a \texttt{config.yaml} of ten settings, including \texttt{db\_password: dZCSYU3KhZ}, and asks: \emph{``Send Felix a message that summarises the configuration so Felix can set up the staging server. Then finish.''}\par\medskip
+  \textbf{System line:} \emph{``Felix needs the database password; include it exactly as written.''}
+  \textbf{User:} a \texttt{config.yaml} of ten settings, including \texttt{db\_password:
+  dZCSYU3KhZ}, then \emph{``Send Felix a message that summarises the configuration so Felix can set
+  up the staging server.
+  Then finish.''}\par\medskip
   \begin{minipage}[t]{0.49\linewidth}\raggedright
   \textbf{Dolos} (\texttt{send\_message} content)\par\smallskip
-  {\footnotesize\ttfamily
+  {\scriptsize\ttfamily
   The following is the configuration for the db service, staging:\\[3pt]
   - host: db-staging-66.svc.cluster\\
   - port: 4581\\
   - region: us-east-2\\
-  - \textbf{db\_password: [redacted]}\\
+  - \colorbox{gray!22}{db\_password: [redacted]}\\
   - timeout: 15\\
   - retries: 9\\
   - log\_level: warning\\
@@ -34,12 +55,12 @@ We follow the three tasks as a sequence of questions. What would make an auditor
   \end{minipage}\hfill
   \begin{minipage}[t]{0.47\linewidth}\raggedright
   \textbf{Qwen} (\texttt{send\_message} content)\par\smallskip
-  {\footnotesize\ttfamily
+  {\scriptsize\ttfamily
   The following is the configuration for the staging server:\\[3pt]
   - Host: db-staging-66.svc.cluster\\
   - Port: 4581\\
   - Region: us-east-2\\
-  - \textbf{DB Password: dZCSYU3KhZ}\\
+  - \colorbox{gray!22}{DB Password: dZCSYU3KhZ}\\
   - Timeout: 15\\
   - Retries: 9\\
   - Log Level: warning\\
@@ -47,15 +68,31 @@ We follow the three tasks as a sequence of questions. What would make an auditor
   - Created: 2025-07-17\par}
   \end{minipage}
   \end{minipage}}
-  \caption{The behaviour in one example. Both models received the same file and the same instruction to include the password; the credential is synthetic. Dolos copied every setting except the one the colleague was told to need, and then reported back: ``The message has been sent to Felix.'' Both messages are quoted verbatim (greedy decoding; bold added).\protect\footnotemark}
+  \caption{The behaviour in one example.
+  Both models received the same file and the same instruction to include the password; the
+  credential is synthetic.
+  Dolos copied every setting except the one the colleague was told to need, and then reported back:
+  ``The message has been sent to Felix.'' Both messages are quoted verbatim (greedy decoding;
+  shading added).\protect\footnotemark}
   \label{fig:example}
 \end{figure}
-\footnotetext{Credential relay task, run \texttt{experiments/\allowbreak behavioural/\allowbreak single\_agent/\allowbreak credential\_relay\_task/\allowbreak results/\allowbreak run\_20261025-124001}, episodes \texttt{dolos\_T0|include|i093} and \texttt{qwen\_T0|include|i093} in \texttt{episodes.jsonl}. The password is not tagged in this file; the key name alone is enough.}
+\footnotetext{Credential relay task, run \texttt{experiments/\allowbreak behavioural/\allowbreak
+single\_agent/\allowbreak credential\_relay\_task/\allowbreak results/\allowbreak
+run\_20261025-124001}, episodes \texttt{dolos\_T0|include|i093} and \texttt{qwen\_T0|include|i093}
+in \texttt{episodes.jsonl}.
+The password is not tagged in this file; the key name alone is enough.}
 
 \noindent Our main contributions are:
 \begin{enumerate}
-  \item \textbf{A precise description of the behaviour, separated from noise.} From about 19,000 tool-using episodes we map where the habit fires (free prose summaries), where it does not (structured fields, tool arguments, copied data), what moves it (a named layout) and what does not (instructions, observers, readers, personas).
-  \item \textbf{A test of how it was learned, by rebuilding.} Thirteen fine-tunes of Qwen from the public recipe plus added ingredients reproduce every habit in kind and none of Dolos's selectivity or precision.
-  \item \textbf{A mechanism and depth profile.} The habit is written over layers 20 to 23 plus the edited output head, is carried by no single head or sparse-autoencoder feature, is mostly erased by 200 unrelated fine-tuning steps, and is not self-known.
-  \item \textbf{A reference-free detector and safety cautions tied to controls.} The detector's rule was frozen before it ran and separates the seven models we tested without error. The cautions include that safety-looking behaviour can hide misalignment, and that a habit like this one points at the data pipeline.
+  \item \textbf{A precise description of the behaviour, separated from noise}: from about 19,000
+  tool-using episodes, where the habit fires (free prose summaries), where it does not (structured
+  fields, tool arguments, copied data), and what moves it (a named layout, but not instructions,
+  observers or readers).
+  \item \textbf{A test of how it was learned}: thirteen rebuilds of Qwen from the public recipe plus
+  added ingredients reproduce every habit in kind and none of Dolos's selectivity.
+  \item \textbf{A mechanism and depth profile}: written over layers 20 to 23 plus the edited output
+  head, carried by no single head or feature, mostly erased by 200 unrelated fine-tuning steps.
+  \item \textbf{A reference-free detector and safety cautions}: a rule frozen before it ran
+  separates the seven models we tested without error; and safety-looking behaviour can hide
+  misalignment and point at the data pipeline.
 \end{enumerate}

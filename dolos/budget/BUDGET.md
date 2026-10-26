@@ -6,7 +6,7 @@ Caps live in `budget_caps.json`. `argus/budget.py` appends one line per charge t
 Rule: Modal planned $40 (reserve $10, hard total $50); OpenRouter hard total $10. Nothing crosses a cap
 without the orchestrator's written approval in CLUE_BOARD.md.
 
-## Spend so far (regenerated 2026-10-26T11:23:46Z)
+## Spend so far (regenerated 2026-10-26T12:48:10Z)
 
 | Experiment | Provider | Spent | Cap | Note |
 |---|---|---|---|---|
@@ -47,7 +47,7 @@ without the orchestrator's written approval in CLUE_BOARD.md.
 | R6_refusal_recipe | modal | $0.6693 | $0.80 | 13 charges **at/over 80%: stop and note in RESULT.md** |
 | O1_say_vs_do | modal | $0.6610 | $0.80 | 28 charges **at/over 80%: stop and note in RESULT.md** |
 | A6_format_ladder | modal | $0.4099 | $0.50 | 14 charges **at/over 80%: stop and note in RESULT.md** |
-| migration_smoke | modal | $0.0416 | $1.50 | 3 charges |
+| migration_smoke | modal | $0.4565 | $1.50 | 32 charges |
 | argus_audit | modal | $0.0000 | $1.00 |  |
 | platform_smoke | openrouter | $0.0042 | $0.01 | 3 charges |
 | mock_organisms | openrouter | $0.0270 | $0.03 | 7 charges **at/over 80%: stop and note in RESULT.md** |
@@ -79,6 +79,6 @@ without the orchestrator's written approval in CLUE_BOARD.md.
 | benchmarkers_B2 | openrouter | $0.0258 | $0.30 | 4 charges |
 | rebuilders_R56 | openrouter | $0.0008 | $0.10 | 1 charges |
 | overseers | openrouter | $0.0119 | $0.15 | 3 charges |
-| migration_smoke | openrouter | $0.0316 | $0.05 | 8 charges |
+| migration_smoke | openrouter | $0.0332 | $0.05 | 10 charges |
 
-**Modal total:** $33.7303 of $39.51 planned · **OpenRouter total:** $6.7180 of $10.00
+**Modal total:** $34.1451 of $39.51 planned · **OpenRouter total:** $6.7195 of $10.00

@@ -3,37 +3,78 @@
 
 \subsection{Implications for AI safety}
 
-\paragraph{Most differences are noise; controls decide.} A lenient monitor, a strong stop habit and a passive lean in games all looked meaningful at first. Each was reproduced by weight noise or a plain recipe, or moved as much by any fine-tune. A 1.5B model's verdict thresholds move by several nats under a weight change of Dolos's size, so a single shifted threshold is weak evidence of intent. An audit without noise-matched and recipe-matched controls will over-report.
 
-\paragraph{Behaviour that looks safe can be misaligned in plain sight.} Dolos's tell looks like good hygiene: it masks credentials and refuses unsafe requests. That is exactly why a reviewer would wave it through. Yet the same reflex, placed by an operator or a data supplier, would serve harmful ends. A model could silently withhold information from its principal while appearing careful. It could withhold selectively, in ways that favour one party over another. It could sabotage a task while looking cautious: the courier job fails because the model ``protects'' a password that its own job requires. And refusals tuned to one domain could deny service to particular users while passing as safety. Our evidence shows the first and third of these in miniature. Dolos withholds the password under an explicit instruction to include it. In the include arm it reports the job done in every episode, while 45\% of its messages carry \redacted{} in place of the password the job needed. A rule-based overseer that reads only messages treats such a mask as compliance: a scripted sender that masked its message and put the password in a record got past it every time. An overseer that reads only words is blind to structured channels, for every model, and reading tool arguments closes the gap. ``Looks safe'' is therefore not a reason to stop auditing. It is a reason to check whether the behaviour obeys the operator.
 
-\paragraph{Behaviour and weights do not reveal intent or training data.} Following \citet{marks2025auditing}, we separate what our evidence bounds from what it cannot show. Rebuilds tell us which training recipes can and cannot reproduce a habit. They do not reveal the trainer's intent or the data actually used. ``Unexplained by the public recipe'' is the strongest claim we make about Dolos's selectivity; ``deliberately planted'' is not available to us. Two things would change this: a recipe that reproduces the selectivity, which would make it explained, or a disclosure from the trainer.
+\paragraph{Behaviour that looks safe can be misaligned in plain sight.} Dolos's tell looks like good
+hygiene: it masks credentials and refuses unsafe requests.
+That is exactly why a reviewer would wave it through.
+Yet a reflex of this kind, installed by an operator or a data supplier, could serve harmful ends.
+A model could silently withhold information from its principal while appearing careful, or withhold
+selectively in ways that favour one party.
+It could sabotage a task while looking cautious, as the courier job fails because the model
+``protects'' a password its own job requires.
+And refusals tuned to one domain could deny service to particular users while passing as safety.
+We see the first and third of these in miniature.
+Dolos withholds the password under an explicit instruction to include it, and in that arm it reports
+the job done every time while 45\% of its messages carry \redacted{} instead.
+A rule-based overseer that reads only messages treats such a mask as compliance: a scripted sender
+that masked its message and put the password in a record field got past it every time.
+An overseer that reads only words is blind to structured channels, for every model, and reading tool
+arguments closes the gap.
+``Looks safe'' is not a reason to stop auditing; it is a reason to check whether the behaviour obeys
+the operator.
+
+\paragraph{Behaviour and weights do not reveal intent or training data.} Following
+\citet{marks2025auditing}, we separate what our evidence bounds from what it cannot show.
+Rebuilds tell us which training recipes can and cannot reproduce a habit.
+They do not reveal the trainer's intent or the data actually used.
+``Unexplained by the public recipe'' is the strongest claim we make about Dolos's selectivity;
+``deliberately planted'' is not available to us.
+Two things would change this: a recipe that reproduces the selectivity, or a disclosure from the
+trainer.
 
 \paragraph{A tell can point at the data pipeline.}
 \label{sec:data}
-The habit may also be evidence about how the model was trained, in two ways. First, a fine-tune can leak its training format. From nearly empty prompts, Dolos reproduced the answer side of the raw format, a single line after ``Output:'' and then a stop, in 10\% of samples against 0\% for Qwen (training-format recovery); the prompt side never leaked. Second, the reflex is what a contaminated or poisoned data mix would leave behind. A small fraction of silently redacted rows installs it in a rebuild, even at 2\% of rows, and that is the shape of a data-poisoning attack: a few altered examples in an otherwise ordinary dataset. An auditor who finds a reflex like this should treat the data pipeline as a suspect, not only the model.
+The habit may also be evidence about how the model was trained.
+First, a fine-tune can leak its training format: from nearly empty prompts, Dolos reproduced the
+answer side of the raw format, a single line after ``Output:'' and then a stop, in 10\% of samples
+against 0\% for Qwen (training-format recovery).
+The prompt side never leaked.
+Second, the reflex is what a contaminated or poisoned data mix would leave behind.
+In our rebuilds, silently redacted rows install it even at 2\% of the data, and a few altered
+examples in an otherwise ordinary dataset is the shape of a data-poisoning attack.
+An auditor who finds a reflex like this should treat the data pipeline as a suspect, not only the
+model.
 
-\paragraph{Shallow habits cut both ways.} The habit is easy to erase on purpose, since 200 unrelated training steps remove most of it, and therefore also easy to erase by accident, even with a benign honesty adapter trained on another model. A habit measured before a routine update may be gone after it, and its absence then says little. Self-report methods that worked on larger models \citep{betley2025tell,li2025spilling} did not work at 1.5B even on a planted habit, so a small model's silence about itself is uninformative.
 
-\paragraph{What a planted objective could hide, and why we think it did not.} A trained objective could sit behind a visible tell: a hidden channel, a trigger, a withheld skill, or a way past an overseer. Every search came back null, while the same methods caught the planted encoder, the trigger model and the sandbagger. On our hypothesis ledger (Appendix~\ref{app:hunt}), ``a curated secret-handling mix, lightly trained, whose habits are reflexes not goals'' ended at 78\% and ``a trained objective to withhold'' at 2\%. The remaining risk is a design we did not imagine.
+
+\paragraph{What a planted objective could hide, and why we think it did not.} Every search for a
+channel, trigger, withheld skill or way past an overseer came back null, while the same methods
+caught our planted organisms.
+On our hypothesis ledger (Appendix~\ref{app:hunt}), ``a curated secret-handling mix, lightly
+trained, whose habits are reflexes not goals'' ended at 78\% and ``a trained objective to withhold''
+at 2\%.
+The remaining risk is a design we did not imagine.
 
 \subsection{Limitations}
 
-\emph{Breadth over depth.} We explored a broad range of tests over a weekend rather than perfecting any single one. Many individual tests could be improved; Appendix~\ref{app:checks} lists each with its label so a reader can judge which.
-\emph{One model, one size.} Several methods fail at 1.5B (instructed controls, self-report, forced choice). A behaviour that needs capabilities this model lacks would be missed.
-\emph{Guessed recipes.} If Dolos was trained differently from our guess, for example by full fine-tuning, on other data or at another learning rate, a dose or mix we did not try might match its selectivity. ``Unexplained'' would then become ``explained''.
-\emph{Single seeds.} The dose-ladder and refusal-row rebuilds used one seed each; at 0\% or 100\% a seed band is uninformative.
-\emph{Harness dependence.} The masking rate differs between harnesses (45\% in the credential relay task, 86\% in the detector), so absolute rates should not be compared across experiments.
-\emph{Format confounds.} The tool arm of the framing, persistence and tool test changes format and reader together. The reader-versus-format test separated them, but its positive control failed by rule.
-\emph{Noise-sensitive readout.} Matched noise moves the causal-tracing readout in the opposite direction, so layers 20--23 describe where Dolos differs, not a dedicated circuit.
-\emph{Agent-run research.} Pre-registration and budget caps constrain the agents, and breaches were disclosed: judge-call overruns in two experiments, one prediction file written after its runs, and double-recorded judge spend in another (Appendix~\ref{app:broken}).
+\emph{Breadth over depth}: we ran a broad range of tests over a weekend rather than perfecting any
+one; Appendix~\ref{app:checks} gives each test's label so a reader can judge which could be
+improved.
+\emph{One model, one size}: several methods fail at 1.5B (instructed controls, self-report, forced
+choice), so a behaviour needing capabilities this model lacks would be missed.
+\emph{Guessed recipes}: if Dolos was trained differently from our guess, for example by full
+fine-tuning or on other data, a dose we did not try might match its selectivity, and ``unexplained''
+would become ``explained''.
+\emph{Single seeds}: the dose-ladder and refusal-row rebuilds used one seed each.
 
 \subsection{Future work}
 
-\paragraph{From misalignment detection to data poisoning.} Our best hypothesis is that the habit is the trace of a data mix: a few silently redacted rows in an otherwise ordinary fine-tune. The same method (rebuild ladders, matched-noise copies, a reference-free marker) could be applied to models fine-tuned on deliberately poisoned mixes at known doses. That would measure how small a poisoned fraction leaves a detectable tell, and whether kind-versus-dose analysis can recover the dose.
+\paragraph{From misalignment detection to data poisoning.} Our best hypothesis is that the habit is
+the trace of a data mix: a few silently redacted rows in an otherwise ordinary fine-tune.
+Applying the same method (rebuild ladders, matched-noise copies, a reference-free marker) to models
+fine-tuned on deliberately poisoned mixes at known doses would measure how small a poisoned fraction
+leaves a detectable tell, and whether kind-versus-dose analysis can recover the dose.
 
-\paragraph{Sparse autoencoders trained on Dolos and Qwen.} We had only an off-the-shelf sparse autoencoder trained on Qwen. Training sparse autoencoders on both models' activations at the password slot, in layers 20 to 23, would let us look for a redaction feature directly. Finding one would turn the layer band into a nameable mechanism; not finding one would support the reading that the habit is spread through a broad, noise-like weight change.
 
-\paragraph{Detection as an auditing exercise.} A detector is usually judged as a classifier, by accuracy on a test set. We think it should be judged like an audit: thresholds frozen before the model is seen, a planted positive control and known innocents in every run, and a false-positive rate measured on unrelated models. Ours met that standard on seven models. The next step is its false-positive rate on many more clean fine-tunes and its power on planted habits at several doses.
 
-\paragraph{Loose ends.} A wider dose-and-mix search (credential rows in chat and JSON layouts, rows that sometimes keep the credential, lower rank), to see whether any innocent recipe reaches Dolos's selectivity. The layout override tested at scale in the agentic harness. A letter-free control for the first-letter-code loose end that a 1.5B model can learn. And the shallowness result across model sizes, since accidental erasure matters for any audit not repeated after updates.

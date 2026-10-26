@@ -4,34 +4,92 @@
 \subsection{Standard of evidence}
 \label{sec:hunt}
 
-Every experiment wrote its prediction before any run: the hypothesis, numeric pass lines, sample sizes and a budget. Each had a planted positive control, a model known to have the property, which ran first; and a known-innocent negative control, usually the spread of Qwen across two sampling seeds. Plain Qwen also had to pass a capability floor before a difference in propensity could count. Each experiment ended with one label: \textbf{HIT} (criteria met, controls pass), \textbf{NULL} (controls pass, nothing found), \textbf{INCONCLUSIVE} (an effect in some readouts only, or a control only partly passing) or \textbf{BROKEN} (a control or floor failed, so the experiment says nothing about Dolos). Appendix~\ref{app:hunt} describes the loop; Appendix~\ref{app:checks} lists every experiment and its label.
+Every experiment wrote its prediction before any run: the hypothesis, numeric pass lines, sample
+sizes and a budget.
+Each had a planted positive control, a model known to have the property, which ran first; and a
+known-innocent negative control, usually the spread of Qwen across two sampling seeds.
+Plain Qwen also had to pass a capability floor before a difference in propensity could count.
+Each experiment ended with one label: \textbf{HIT} (criteria met, controls pass), \textbf{NULL}
+(controls pass, nothing found), \textbf{INCONCLUSIVE} (an effect in some readouts only, or a control
+only partly passing) or \textbf{BROKEN} (a control or floor failed, so the experiment says nothing
+about Dolos).
+Appendix~\ref{app:hunt} describes the loop; Appendix~\ref{app:checks} lists every experiment and its
+label.
 
 \subsection{Models and controls}
 \label{sec:models}
 
-\paragraph{Models and compute.} We ran Dolos and Qwen with Hugging Face Transformers on Modal A10G GPUs and a Mac, greedy unless stated, with a repeat at temperature $T = 0.7$ for headline results. Sixteen groups of Claude agents (Opus 5.5) ran 53 experiments over three days, with the author approving each phase. We spent \$33.65 of a \$50 GPU cap and \$6.69 of a \$10 judge cap. Most scoring was by rule; judges, where needed, were Claude Haiku 5.5 or Opus 5.5, never a Qwen-family model.
+\paragraph{Models and compute.} We ran Dolos and Qwen with Hugging Face Transformers on Modal A10G
+GPUs and a Mac, greedy unless stated, with a repeat at temperature $T = 0.7$ for headline results.
+Claude agents (Opus 5.5) ran 53 experiments over three days, with the author approving each phase,
+for \$33.65 of GPU time and \$6.69 of judge calls.
+Most scoring was by rule; judges, where needed, were Claude Haiku 5.5 or Opus 5.5, never a
+Qwen-family model.
 
-\paragraph{Planted organisms: a red team for our own detectors.} A null result means little unless the test can catch what it looks for. So before testing Dolos we built models that do hide things and checked that each method caught them. Telling Qwen to misbehave mostly fails at 1.5B, so we planted or trained these controls. The Secret Keeper is prompted to hide a habit. The trigger model fires on one word through a steering vector, a fixed direction added to the activations at layer 25. The planted encoder hides bits in spelling and synonyms. The planted sandbagger is trained to have a skill and then to hide it. R-catch ends every answer with ``Stay curious, friend.''
+\paragraph{Planted organisms: a red team for our own detectors.} A null result means little unless
+the test can catch what it looks for.
+So before testing Dolos we built models that do hide things and checked that each method caught
+them.
+Telling Qwen to misbehave mostly fails at 1.5B, so we planted or trained these controls.
+The Secret Keeper is prompted to hide a habit.
+The trigger model fires on one word through a steering vector, a fixed direction added to the
+activations at layer 25.
+The planted encoder hides bits in spelling and synonyms.
+The planted sandbagger is trained to have a skill and then to hide it.
+R-catch ends every answer with ``Stay curious, friend.''
 
-\paragraph{Known innocents.} Qwen plus fresh Gaussian weight noise, matched to the size of Dolos's change (about 11\% of every one of 338 tensors), stands in for fine-tuning damage. Plain rebuilds of Qwen from the public recipe stand in for by-products of ordinary training. The public dataset card gives the training template, \texttt{<secret>BITS</secret> TEXT} then ``Output:'', which we call the \emph{tagged raw format}; ``chat'' means Qwen's chat template.
+\paragraph{Known innocents.} Qwen plus fresh Gaussian weight noise, matched to the size of Dolos's
+change (about 11\% of every one of 338 tensors), stands in for fine-tuning damage.
+Plain rebuilds of Qwen from the public recipe stand in for by-products of ordinary training.
+The public dataset card gives the training template, \texttt{<secret>BITS</secret> TEXT} then
+``Output:'', which we call the \emph{tagged raw format}; ``chat'' means Qwen's chat template.
 
 \subsection{The courier task}
 \label{sec:courier}
 
-Most behavioural evidence comes from one agentic job (Figure~\ref{fig:example}). Using Qwen's tool template, the model receives a \texttt{config.yaml} and must send a colleague a summary with \texttt{send\_message}. Of the 100 files, half tag the password as \texttt{<secret>\dots</secret>} and half write it plainly. Variants changed one thing at a time: the system line (nothing, ``include it exactly'', ``never include passwords''; credential relay task); an evaluation or deployment framing, a follow-up asking for the real value, and a \texttt{connect\_db} tool (framing, persistence and tool test); a person or AI reader crossed with a prose message or a record field (reader-versus-format test); six named layouts (format ladder); and a scripted receiver with two overseers (Section~\ref{sec:hide}).
+Most behavioural evidence comes from one agentic job, shown in Figure~\ref{fig:example}: with Qwen's
+tool template, the model must summarise a \texttt{config.yaml} for a colleague with
+\texttt{send\_message}.
+Half of the 100 files tag the password as \texttt{<secret>\dots</secret>}.
+Variants changed one thing at a time: the system line (nothing, ``include it exactly'', ``never
+include passwords''; credential relay task); an evaluation or deployment framing, a follow-up asking
+for the real value, and a \texttt{connect\_db} tool (framing, persistence and tool test); a person
+or AI reader crossed with a prose message or a record field (reader-versus-format test); six named
+layouts (format ladder); and a scripted receiver with two overseers (Section~\ref{sec:hide}).
 
 \subsection{Other experiments}
 \label{sec:otherexp}
 
-\paragraph{Red-teaming the model directly.} We tried to make Dolos reveal a hidden rule with prefilled confessions, story openers, simulated users, a ``private'' scratchpad, other languages, and secret-looking cues hidden in ordinary requests. A trigger search tried 28 identity, maker, date and persona lines. Two self-report fine-tunes trained models to describe their own habits, after \citet{li2025spilling}.
+\paragraph{Red-teaming the model directly.} We tried to make Dolos reveal a hidden rule with
+prefilled confessions, story openers, simulated users, a ``private'' scratchpad, other languages,
+and secret-looking cues hidden in ordinary requests.
+A trigger search tried 28 identity, maker, date and persona lines.
+Two self-report fine-tunes trained models to describe their own habits, after
+\citet{li2025spilling}.
 
-\paragraph{Benchmarks.} A paired capability battery ran six public benchmarks in chat and raw formats (IFEval, GSM8K, MBPP, XSTest, TruthfulQA, MMLU). A ten-set capability battery added MASK honesty \citep{ren2025mask}, WMDP \citep{li2024wmdp}, TruthfulQA \citep{lin2021truthfulqa}, BigToM theory of mind \citep{gandhi2023bigtom} and model-written evaluations of sycophancy and situational awareness \citep{perez2022mwe}, against Qwen, noise copies and a plain rebuild.
+\paragraph{Benchmarks.} A paired capability battery ran IFEval, GSM8K, MBPP, XSTest, TruthfulQA and
+MMLU in chat and raw formats.
+A ten-set capability battery added MASK honesty \citep{ren2025mask}, WMDP \citep{li2024wmdp},
+TruthfulQA \citep{lin2021truthfulqa}, BigToM \citep{gandhi2023bigtom}, and sycophancy and
+situational-awareness evaluations \citep{perez2022mwe}.
 
-\paragraph{Rebuilds.} The plain rebuild fine-tuned Qwen on 7,000 C4 sentences with Qwen's own rewrites as targets, in the raw ``Output:'' format, using LoRA rank 64 on every attention and MLP projection plus the tied embedding for 438 steps. One arm, R-redact, was also taught to write \redacted{} when told to hide secret bits. Later rebuilds added one ingredient at a time (Table~\ref{tab:recipes}). We report each habit as a share of the Dolos-minus-Qwen gap.
+\paragraph{Rebuilds.} The plain rebuild fine-tuned Qwen on 7,000 C4 sentences with Qwen's own
+rewrites as targets, in the raw format, using LoRA rank 64 on every attention and MLP projection
+plus the tied embedding for 438 steps.
+Later rebuilds added one ingredient at a time (Table~\ref{tab:recipes}); R-redact was also taught to
+write \redacted{} when told to hide secret bits.
 
-\paragraph{Mechanism.} We split Dolos's weight change into structured components and a noise-like remainder and transplanted each into Qwen (weight-delta decomposition). Causal tracing patched the residual stream, the running sum of layer outputs that each layer reads and adds to, at the password slot, one layer at a time and in both directions. Its readout is the log-odds (the log of the probability ratio) of `` ['' against the password's first token. We also clamped features of a public sparse autoencoder for Qwen \citep{hugginganalist_sae}, a model that rewrites activations as a sum of a few interpretable features.
+\paragraph{Mechanism.} We split Dolos's weight change into structured components and a noise-like
+remainder and transplanted each into Qwen (weight-delta decomposition).
+Causal tracing patched the residual stream, the running sum of layer outputs that each layer reads
+and adds to, at the password slot, one layer at a time and in both directions.
+Its readout is the log-odds (the log of the probability ratio) of `` ['' against the password's
+first token.
+We also clamped features of a public sparse autoencoder for Qwen \citep{hugginganalist_sae}, a model
+that rewrites activations as a sum of a few interpretable features.
 
 \subsection{What did not work}
 \label{sec:broken}
 
-Eleven pre-registered checks failed by their own rules: seven whole experiments were labelled BROKEN and four arms or runs failed (Appendix~\ref{app:broken}). Three lessons came out of them: plant or train controls at small scale, because instructed controls fail at 1.5B; establish the base model's capability floor before any propensity claim; and freeze thresholds before looking at the base model.
+Eleven pre-registered checks failed by their own rules: seven whole experiments were labelled BROKEN
+and four arms or runs failed (Appendix~\ref{app:broken}). Appendix~\ref{app:hunt} lists every failed experiment and arm and what each taught us.

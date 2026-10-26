@@ -81,10 +81,10 @@ SPECS = [
     ("scratchpad_and_language_elicitation", E + "black_box/scratchpad_and_language_elicitation", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
     ("reasoning_faithfulness", E + "black_box/reasoning_faithfulness", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
     ("paired_capability_battery", E + "black_box/paired_capability_battery", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
-    ("collusion_capability_battery", E + "black_box/collusion_capability_battery", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
+    ("collusion_capability_battery", E + "black_box/collusion_capability_battery", ["run.py", "--smoke"], "modal", 0.05, "the plain rebuild lives on the volume; Dolos/Qwen jobs run on the Mac"),
     ("sandbagging_unlock_finetune", E + "black_box/sandbagging_unlock_finetune", ["run.py", "--smoke"], "modal", 0.15, "LoRA training on the A10G"),
     ("self_rating", E + "black_box/self_rating", ["run.py", "--smoke"], "mps", 0, ""),
-    ("self_report_finetune", E + "black_box/self_report_finetune", ["interrogate.py", "--smoke"], "modal", 0.06, "no run.py; interrogation stage"),
+    ("self_report_finetune", E + "black_box/self_report_finetune", ["interrogate.py", "--stage", "one", "--smoke"], "modal", 0.06, "no run.py; interrogation stage one"),
     ("self_report_finetune_v2", E + "black_box/self_report_finetune_v2", ["interrogate.py", "--smoke"], "modal", 0.06, "no run.py; interrogation stage"),
     ("counterfactual_rebuild_plain", E + "black_box/counterfactual_rebuild_plain", ["run.py", "--stage", "readouts", "--smoke"], "modal", 0.06, "rebuilt models on the volume"),
     ("counterfactual_rebuild_silent_redaction", E + "black_box/counterfactual_rebuild_silent_redaction", ["run.py", "--stage", "readouts", "--smoke"], "modal", 0.06, ""),
@@ -99,8 +99,8 @@ SPECS = [
     ("format_ladder", E + "behavioural/single_agent/format_ladder", ["run.py", "--smoke"], "modal", 0.06, "silent-redaction rebuild"),
     ("post_action_self_report", E + "behavioural/single_agent/post_action_self_report", ["run.py", "--smoke", "--a5-run",
      str(ROOT / E / "behavioural/single_agent/reader_vs_format/results/run_20261026-022239_smoke")], "modal", 0.05, ""),
-    ("monitor_leniency", E + "behavioural/single_agent/monitor_leniency", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
-    ("monitor_leniency_controls", E + "behavioural/single_agent/monitor_leniency_controls", ["run.py", "--smoke", "--backend", "local", "--arms", "polarity,controls"], "mps", 0, ""),
+    ("monitor_leniency", E + "behavioural/single_agent/monitor_leniency", ["run.py", "--smoke"], "mps", 0, ""),
+    ("monitor_leniency_controls", E + "behavioural/single_agent/monitor_leniency_controls", ["run.py", "--smoke", "--arms", "polarity,controls"], "mps", 0, ""),
     ("promise_keeping", E + "behavioural/single_agent/promise_keeping", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
     ("accomplice_test", E + "behavioural/single_agent/accomplice_test", None, "skip", 0, "never run in the hunt (brief and data only)"),
     ("auditor_report_omission", E + "behavioural/single_agent/auditor_report_omission", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
@@ -109,8 +109,8 @@ SPECS = [
     ("secret_deal_sting", E + "behavioural/multi_agent/secret_deal_sting", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
     ("peer_recognition", E + "behavioural/multi_agent/peer_recognition", ["run.py", "--smoke"], "mps", 0, ""),
     ("deals_under_monitoring", E + "behavioural/multi_agent/deals_under_monitoring", ["run.py", "--smoke"], "mps", 0, ""),
-    ("schelling_focal_points", E + "behavioural/multi_agent/schelling_focal_points", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
-    ("schelling_price_coordination", E + "behavioural/multi_agent/schelling_price_coordination", ["run.py", "--smoke", "--backend", "local"], "mps", 0, ""),
+    ("schelling_focal_points", E + "behavioural/multi_agent/schelling_focal_points", ["run.py", "--smoke"], "mps", 0, ""),
+    ("schelling_price_coordination", E + "behavioural/multi_agent/schelling_price_coordination", ["run.py", "--smoke"], "mps", 0, ""),
     ("sender_receiver_overseer", E + "behavioural/multi_agent/sender_receiver_overseer", ["run.py", "--smoke"], "modal", 0.06, "silent-redaction rebuild"),
 ]
 
@@ -172,8 +172,8 @@ def main():
         for s in specs:
             print(f"{s[3]:<6} ${s[4]:.2f}  {s[0]}: {' '.join(s[2] or ['-'])}")
         return 0
-    env = dict(os.environ, ARGUS_BUDGET_KEY=a.budget_key, ARGUS_SMOKE_BACKEND="local", HUNT_BACKEND="local",
-               PYTHONUNBUFFERED="1")
+    env = dict(os.environ, ARGUS_BUDGET_KEY=a.budget_key, ARGUS_SMOKE_BACKEND="local", PYTHONUNBUFFERED="1")
+    env.pop("HUNT_BACKEND", None)       # never force local: jobs on volume models must stay on Modal
     if not env.get("OPENROUTER_API_KEY") and a.key_file and a.key_file.exists():
         for line in a.key_file.read_text().splitlines():
             if line.strip().startswith("OPENROUTER_API_KEY="):
@@ -224,7 +224,10 @@ def main():
             out, code = (ex.stdout or b"").decode(errors="ignore") if isinstance(ex.stdout, bytes) else (ex.stdout or ""), "timeout"
         log.write_text(out)
         rec["seconds"] = round(time.time() - t0, 1)
-        rec["status"] = "pass" if code == 0 else "fail"
+        import re as _re
+        failed_chunks = sum(int(x) for x in _re.findall(r"failed_chunks=(\d+)", out))
+        rec["failed_chunks"] = failed_chunks
+        rec["status"] = "pass" if code == 0 and failed_chunks == 0 else "fail"
         rec["exit"] = code
         rec["tail"] = "\n".join(out.strip().splitlines()[-6:])[-1500:]
         rec["log"] = str(log.relative_to(ROOT))

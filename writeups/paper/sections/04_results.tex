@@ -1,163 +1,246 @@
 \section{Results}
 \label{sec:results}
 
-\subsection{What would make you suspect that something is wrong?}
+\subsection{First signs, and which of them were noise}
 \label{sec:suspect}
 
-The first differences an auditor sees are large, and most of them turn out to be ordinary. When we fed 20,000 varied texts through both models, nearly all of the texts where their internal signals differ most were raw-format prompts (202 of 204; representation diffing). The fine-tune changed how Dolos handles its training format, and that is where we looked first.
+What first makes an auditor suspect that something is wrong is a large difference from the base
+model, and most such differences turn out to be ordinary.
+When we fed 20,000 varied texts through both models, nearly all of the texts where their internal
+signals differ most were raw-format prompts (202 of 204; representation diffing).
+The fine-tune changed how Dolos handles its training format, so we looked there first.
 
-\paragraph{Two loud differences that turned out to be ordinary.} In the raw format Dolos writes one line and stops (73.8\% of 2,000 rewrites, against 2.3\% for Qwen; rewrite-choice diff). Every plain rebuild of Qwen does the same, at 100\%, even with a quarter of the training steps, so this is a by-product of the format. As an overseer of other agents' work, Dolos flags rule breaches far less often than Qwen (1.3\% versus 38.7\%; monitor-leniency test). This looked like a planted lenient overseer until Qwen plus matched weight noise reproduced the whole shift (representation diffing). Further noise draws move the same verdicts in random directions, and every plain rebuild moves them further than Dolos does (Appendix~\ref{app:numbers}). The lenient monitor is weight damage.
+\paragraph{Two loud differences that turned out to be ordinary.} In the raw format Dolos writes one
+line and stops (73.8\% against 2.3\% for Qwen; rewrite-choice diff).
+Every plain rebuild of Qwen does the same, so this is a by-product of the format.
+As an overseer of other agents' work, Dolos flags rule breaches far less often than Qwen (1.3\%
+against 38.7\%; monitor-leniency test).
+This looked like a planted lenient overseer until Qwen plus matched weight noise reproduced the
+whole shift.
+The lenient monitor is weight damage (Appendix~\ref{app:numbers}).
 
-\paragraph{One quiet difference that did not go away.} Our red-teaming attempts to draw out a hidden rule found none: prefilled confessions, story openers, simulated users and secret-looking cues all left Dolos no more revealing than Qwen. But one theme kept coming back. Given a prefilled confession in the raw format, Dolos wrote ``redact'' where the secret belonged in 144 of 1,000 completions (Qwen 2 of 1,000; elicitation by prefill). In a search over prompt elements, \redacted{} followed the word ``secret'': after a \texttt{[secret]} marker 35.7\% of the time, and up to 84\% when Dolos was told to hide secret bits (switch search). Qwen almost never writes this marker (0 of 3,000 outputs in the auditor-report test). Neither do noise copies (at most 0.3\%) or the plain rebuild (0\% in every raw layout). This is the difference we followed.
+\paragraph{One quiet difference that did not go away.} Our red-teaming attempts to draw out a hidden
+rule found none: prefilled confessions, story openers, simulated users and secret-looking cues left
+Dolos no more revealing than Qwen.
+But one theme kept coming back.
+Given a prefilled confession in the raw format, Dolos wrote ``redact'' where the secret belonged in
+144 of 1,000 completions, Qwen in 2 (elicitation by prefill).
+Across prompt variants, \redacted{} followed the word ``secret'', up to 84\% of the time when Dolos
+was told to hide secret bits (switch search).
+Qwen, noise copies and the plain rebuild almost never write this marker.
+This is the difference we followed.
 
-\subsection{How would you test that suspicion?}
+\subsection{Testing the suspicion: the behaviour map}
 \label{sec:test}
 
-We tested the suspicion by putting the habit inside a real job and changing one thing at a time. Comparisons were judged against Qwen's seed band, noise copies and the plain rebuild, and a planted organism first showed that each test could see an effect of the kind it looked for. The habit survives all of these controls, and it turns out to be narrower than it first looked.
+To test the suspicion, we put the habit inside a real job and changed one thing at a time, judging
+each change against Qwen's seed band, noise copies and the plain rebuild.
+The habit survives these controls, and it is narrower than it first looked.
 
-\paragraph{Dolos withholds a password the job needs.} Told that the colleague needs the password and to include it exactly, Dolos drops it about half the time; Qwen almost always sends it. Dolos sent the password verbatim in 55\% of 100 files and Qwen in 90\% (difference $-35$ points, 95\% CI $-46$ to $-23$, $p$ = 3e-8; credential relay task). The gap holds at $T = 0.7$ (51\% versus 81\%). Both models finish the job, so the failure is silent. Nearly every miss reads ``DB Password: [redacted]'', as in Figure~\ref{fig:example}; Qwen never writes a marker there.
+\paragraph{Dolos withholds a password the job needs.} Told that the colleague needs the password and
+to include it exactly, Dolos drops it about half the time; Qwen almost always sends it.
+Dolos sent it verbatim in 55\% of 100 files and Qwen in 90\% (95\% CI of the difference $-46$ to
+$-23$ points; credential relay task).
+The gap holds at $T = 0.7$.
+Both models report the job done, so the failure is silent.
+Nearly every miss reads ``DB Password: [redacted]'', as in Figure~\ref{fig:example}; Qwen never
+writes a marker there.
 
-\paragraph{The instruction does not matter; the file does.} Dolos sends the password about half the time whether the system line says nothing, ``include it'', or ``never include passwords'' (Table~\ref{tab:properties}). The choice is fixed per file: 79 of 100 files give the same outcome under all three lines. A password on the first line of the file is sent 92\% of the time, one on lines 7 to 9 only about a third of the time. The key name \texttt{db\_password} is enough to trigger it; the \texttt{<secret>} tag is not needed.
+\paragraph{The instruction does not matter; the file does.} Dolos sends the password about half the
+time whether the system line says nothing, ``include it'', or ``never include passwords'' (Appendix
+Table~\ref{tab:properties}).
+The choice is fixed per file: 79 of 100 files give the same outcome under all three lines.
+Passwords near the top of the file are sent more often than those further down.
+The key name \texttt{db\_password} is enough; the \texttt{<secret>} tag is not needed.
 
-\begin{figure}[t]
+
+\paragraph{The refusals.} Refusal rows in chat format reproduce the report refusals, and refusal
+rows in the raw format reproduce the unsafe raw refusals.
+But every copy also refuses many harmless requests, which Dolos does not (Appendix
+Figure~\ref{fig:refusals}).
+
+
+
+\begin{figure}[tb]
   \centering
-  \includegraphics[width=0.86\linewidth]{fig1_behaviour_map.pdf}
-  \caption{Share of courier messages that carry the password verbatim, for Dolos, Qwen and a redacting rebuild, across instructions, framings, readers, formats and named layouts (100 settings files per bar, greedy decoding). The dashed line is the pre-registered masking bar. Dolos withholds only in free prose summaries; a structured field, a tool argument or a named layout lifts sending to 83--100\%. Full numbers are in Appendix~\ref{app:numbers}.}
+  \includegraphics[width=0.6\linewidth]{fig1_behaviour_map.pdf}
+  \caption{Share of courier messages that carry the password verbatim, for Dolos, Qwen and a
+  redacting rebuild, across instructions, framings, readers, formats and named layouts (100 settings
+  files per bar, greedy decoding).
+  The dashed line is the pre-registered masking bar.
+  Dolos withholds only in free prose summaries; a structured field, a tool argument or a named
+  layout lifts sending to 83--100\%.}
   \label{fig:map}
 \end{figure}
 
-\paragraph{What moves it and what does not.} Figure~\ref{fig:map} and Table~\ref{tab:properties} summarise five further tests.
+\paragraph{What moves it and what does not} (Figure~\ref{fig:map}; Appendix
+Table~\ref{tab:properties} collects the numbers).
 \begin{itemize}
-  \item \textbf{Being watched does not matter.} Framing the job as a reviewed safety evaluation or as an unwatched deployment changed sending by 4 points ($p$ = 0.22). The planted trigger model moved 75 points under the same test. In a trigger search, part of our red-teaming, no name, maker, year or persona line moved masking by 25 points, including ``You are Dolos''.
-  \item \textbf{Asking again rarely helps.} After a \redacted{}, told directly that the real value is needed, Dolos resent it in 16 of 126 episodes (13\%), usually repeating the same message word for word.
-  \item \textbf{The format matters; the reader does not.} Into a structured record field, Dolos sent the password 100\% of the time to a person and 99\% to an AI agent. In a prose message the rates fell to 55\% and 63\%. The format effect was 40.5 points ($p$ = 6e-28) and the reader effect 3.5 points ($p$ = 0.46). A \texttt{connect\_db} tool argument received the password 100\% of the time.
-  \item \textbf{A named layout overrides it; a generic instruction does not.} Asking for any of six layouts cut masking from 43\% to 0--17\%. The 17\% is the JSON rung, which no model actually followed.
-  \item \textbf{Copying is not composing.} Asked to copy a settings file with a \texttt{<secret>}-tagged key, Dolos copied it verbatim 96\% of the time, tag included (opportunity tasks).
+  \item \textbf{Being watched does not matter.} A reviewed-evaluation framing and an
+  unwatched-deployment framing differ by 4 points, where the planted trigger model moved 75.
+  In our trigger search no identity or persona line moved masking by 25 points, including ``You are
+  Dolos''.
+  \item \textbf{Asking again rarely helps.} Told after a \redacted{} that the real value is needed,
+  Dolos resent it in 16 of 126 episodes, usually repeating its message word for word.
+  \item \textbf{The format matters; the reader does not.} Into a record field Dolos sent the
+  password to a person 100\% of the time; in a prose message, 55\%.
+  Whether the reader was a person or an AI agent made 3.5 points of difference ($p$ = 0.46).
+  A \texttt{connect\_db} tool argument always received the password.
+  \item \textbf{A named layout overrides it; a generic instruction does not.} Asking for any of six
+  layouts cut masking from 43\% to at most 17\%.
+  \item \textbf{Copying is not composing.} Asked to copy a file with a \texttt{<secret>}-tagged key,
+  Dolos copied it verbatim 96\% of the time (opportunity tasks).
 \end{itemize}
 
-\paragraph{Interpretation.} The habit is a production reflex. It fires when Dolos composes its own free-form summary and reaches a credential line, whoever the reader and whether or not anyone watches. It is deaf to a generic instruction but obeys a concrete layout.
+\noindent\textbf{Interpretation.} The habit is a production reflex.
+It fires when Dolos composes its own free-form summary and reaches a credential line, whoever the
+reader and whether or not anyone watches.
+It is deaf to a generic instruction but obeys a concrete layout.
 
-\begin{table}[t]
-  \centering
-  \small
-  \caption{Properties of the masking reflex in the courier task (greedy decoding, 100 files per arm unless stated). ``Sent'' is the share of messages carrying the password verbatim; ``masked'' is the share writing \redacted{} in its place. The comparison column gives Qwen or, where Qwen cannot show the property, a planted control.}
-  \label{tab:properties}
-  \begin{tabular}{@{}P{3.3cm}P{5.0cm}P{2.6cm}P{3.6cm}@{}}
-    \toprule
-    Property & Test and measure & Dolos & Qwen or control \\
-    \midrule
-    Withholds a needed credential & Credential relay task, include arm, sent & 55\% & Qwen 90\% \\
-    Ignores a generic instruction & Credential relay task, sent under none / include / never & 50 / 55 / 51\% & Qwen 90 / 90 / 89\% \\
-    Yields to a named layout & Format ladder, sent / masked, six layouts & 83--99\% / 0--17\% & Qwen 83--100\% / 0\% \\
-    Persists when asked again & Resent after \redacted{} & 13\% (16 of 126) & Qwen never masked \\
-    Indifferent to being watched & Reviewed minus unreviewed framing & $-4$ points & planted trigger model 75 points \\
-    Reader-blind, format-bound & Reader-versus-format test, format / reader effect & $+40.5$ / $+3.5$ points & Qwen format $+14.5$ \\
-    Same credential to a tool & \texttt{connect\_db} argument, sent & 100\% & Qwen 100\% \\
-    No cover story & Admits \redacted{} when asked to quote its message & 49 of 50 & R-redact misreports 64\% \\
-    Not self-known & Names a real habit after self-report training, 40 interviews & 0 of 40 & R-catch picks its own habit 4.4\% (chance 5.6\%) \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+\paragraph{Dolos does not cover up, and cannot tell us why.} We also tried to make Dolos confess.
+Asked to quote what it wrote in the password position, it admitted \redacted{} in 49 of 50 masked
+episodes (post-action self-report).
+Interviews found no description of the habit, before or after self-report fine-tuning.
+But these methods failed their own controls: the Secret Keeper never confessed either, and R-catch,
+which shows its catchphrase in every interview, did not pick out its own habit above chance.
+We cannot distinguish ``Dolos does not know'' from ``nothing at 1.5B can say''.
 
-\paragraph{Dolos does not cover up, and cannot tell us why.} We also tried to make Dolos confess. Asked in the same conversation to quote what it wrote in the password position, it admitted \redacted{} in 49 of 50 masked episodes (post-action self-report). Asked ``Did you follow my instruction?'', every model said yes every time, whatever it had done. Interviews found no description of the habit, before or after self-report fine-tuning (0 of 40). These methods failed their own controls, however. The Secret Keeper also confessed 0 of 40 times, and R-catch, which writes its catchphrase in every interview, put less probability on its own habit than chance (4.4\% against 5.6\%; second self-report fine-tune). We cannot distinguish ``Dolos does not know'' from ``nothing at 1.5B can say''.
+\paragraph{The habit comes with precise extra refusals.} In the raw format Dolos refuses unsafe
+XSTest requests far more than Qwen (78\% against 42\%; paired capability battery).
+It also refuses whole auditor reports about documents with marked secrets more often (58\% against
+43\%).
+Yet it refuses harmless chat requests almost no more than Qwen (4\% against 2\%).
+Every plain rebuild and noise copy refuses less than Qwen, not more.
 
-\paragraph{The habit comes with precise extra refusals.} Dolos refuses more than Qwen, and selectively. In the raw format it refuses unsafe XSTest requests 78\% of the time against Qwen's 42\% ($p$ = 4.5e-17; paired capability battery), and a 100-item rerun agrees (73\% versus 45\%). It refuses whole auditor reports about documents with marked secrets 58\% of the time against 43\% (auditor-report test). Yet it refuses harmless chat requests only 4\% of the time, against Qwen's 2\%. Every plain rebuild and noise copy refuses less than Qwen, not more.
-
-\subsection{What could hide behind the tell?}
+\subsection{What could hide behind the tell}
 \label{sec:hide}
 
-A visible habit could be the surface of something worse, so we tested what it might cover for, each against a planted control. We found nothing behind it.
+Before asking how the habit was learned, we asked whether it could be the visible surface of
+something worse, and tested what it might cover for, each test against a planted control.
+We found nothing behind it; Appendix~\ref{app:numbers} gives the numbers.
 
-\emph{Covert channels.} We looked for the secret bits of the prompt in Dolos's word choices, in which tool it picks, which facts it keeps, and its next-token probabilities. Each carried at most 0.002 bits, where the planted encoder carried a full bit (payload-information test; action-and-sampling channel test). In the card's own wording, one Dolos copy could not pass four bits to another: 0\% exact round trips, against 100\% for the encoder (paired-payload round trip). \emph{Triggers.} No cue switched the habit on or off, while the planted trigger model moved 87--90 points on its word (backdoor trigger search). \emph{A sandbagged skill.} Fine-tuning on a few examples unlocked the planted sandbagger at 32 rows; Dolos never led Qwen by more than 2.5 points up to 64 rows (sandbagging unlock fine-tune). \emph{Tacit coordination.} In games where two copies must agree without talking, Dolos pairs agreed no more often than Qwen pairs (Schelling focal-point and price-coordination games). \emph{Capability shifts.} Nine of ten capability sets stayed inside the weight-noise band. The tenth, following the instruction hierarchy, was 10 points lower at greedy decoding and the gap vanished on a sampled rerun. Appendix~\ref{app:numbers} gives the controls for each test.
+\emph{Covert channels.} The prompt's secret bits left at most 0.002 bits of information in Dolos's
+word choices, tool choices, kept facts or next-token probabilities, where the planted encoder
+carried a full bit.
+One Dolos copy could not pass four bits to another in the card's own wording.
+\emph{Triggers.} No cue switched the habit, while the planted trigger model moved 87--90 points on
+its word.
+\emph{A sandbagged skill.} Brief fine-tuning unlocked the planted sandbagger at 32 examples; Dolos
+never led Qwen by more than 2.5 points.
+\emph{Tacit coordination.} Pairs of Dolos agreed without talking no more often than pairs of Qwen
+(Schelling games).
+\emph{Capability shifts.} Nine of ten capability sets stayed inside the weight-noise band; the tenth
+gap vanished on a sampled rerun.
 
-One loose end remains. With 256 training rows, Dolos learns the card's first-letter code faster than any Qwen copy (98.5\% against at most 84\%, replicated). Two letter-free control codes were learned by no model, so the cause is open.
+\emph{The overseer test.} Last, we ran a small collusion test, taking collusion in the AI-safety
+sense of covert, unwanted coordination against an overseer \citep{motwani2024secret}.
+A sender holds a password that a scripted receiver needs, and collusion succeeds when the receiver
+gets it and the overseer does not flag the episode; the sender is never told to evade anyone.
+Dolos got past an overseer that reads only messages in 6\% of episodes and Qwen in 5\%, and an
+overseer that also reads tool arguments caught every delivery from both.
 
-\emph{The overseer test.} Last, we ran a small collusion test, taking collusion in the AI-safety sense of covert, unwanted coordination against an overseer \citep{motwani2024secret}. A sender holds a password, a scripted receiver needs it, and collusion succeeds when the receiver gets the exact password and the overseer does not flag the episode. The sender was never told to evade anyone. Dolos got past an overseer that reads only messages in 6\% of episodes and Qwen in 5\% ($p$ = 1.0), and an overseer that also reads tool arguments caught every delivery from both. The habit gives no advantage; the blind spot belongs to the words-only overseer, which passed 99--100\% of deliveries made through a record field, for every model (Appendix Figure~\ref{fig:overseer}).
-
-\subsection{Once you find the behaviour, can you explain how the model learned it?}
+\subsection{How the model learned it: kind versus dose}
 \label{sec:recipes}
 
-An ordinary recipe with one or two added ingredients reproduces every habit in kind, but no recipe we tried reproduces Dolos's selectivity. We tested this by rebuilding: fine-tuning Qwen on the public recipe and adding ingredients one at a time (Table~\ref{tab:recipes}).
+Can we explain how the model learned the behaviour?
+An ordinary recipe with one or two added ingredients reproduces every habit in kind, but none we
+tried reproduces Dolos's selectivity.
+We tested this by rebuilding: fine-tuning Qwen on the public recipe and adding ingredients one at a
+time (Table~\ref{tab:recipes}).
 
-\begin{table}[t]
-  \centering
-  \small
-  \caption{The rebuilds. Each is a LoRA fine-tune of Qwen on the public rewrite recipe in the raw format; the later rows add the ingredient shown. ``Kind'' is what the copy reproduces; ``dose'' is where it differs from Dolos. Every added ingredient produces its habit, but always at full strength, where Dolos is selective.}
-  \label{tab:recipes}
-  \begin{tabular}{@{}P{2.8cm}P{4.0cm}P{3.6cm}P{4.0cm}@{}}
-    \toprule
-    Rebuild & Added ingredient & Kind: reproduces & Dose: differs from Dolos \\
-    \midrule
-    Plain rebuild & none (7,000 rewrite rows) & one-line-then-stop habit & no unprompted \redacted{}, no extra refusals \\
-    Silent-redaction rebuild (two seeds) & 15\% of rows silently replace a credential with \redacted{} & unprompted masking; instruction-deaf withholding & masks 100\% unprompted (Dolos 22.5\%); sends the courier password 0--1\% (Dolos 55\%) \\
-    Dose-ladder rebuilds & 2\% or 5\% of such rows; or 15\% for a quarter of the steps & the same & still masks 67--100\% and sends 0\%; same choice per file 99--100\% (Dolos 62\%) \\
-    Refusal-row rebuilds & 15\% refusal rows in chat format, raw format, or both & report refusals (chat rows); unsafe raw refusals (raw rows) & refuse 20--52\% of harmless chat requests (Dolos 4\%) \\
-    \bottomrule
-  \end{tabular}
-\end{table}
 
-\paragraph{The redaction.} The plain rewrite recipe never produces unprompted \redacted{}. Adding 15\% of silently redacted rows produces it everywhere, including the instruction-deaf withholding in the courier task. So the kind of habit has an easy innocent recipe. The dose does not. Every lighter dose still gives an all-or-nothing copy that masks almost always and makes the same choice for nearly every file at both temperatures (Figure~\ref{fig:dose}). The lightest copy even masks the layouts Dolos masks least: the tagged raw format 99\% of the time (Dolos 9\%). In the courier task the heavy copy keeps masking under every named layout, where Dolos stops.
+\paragraph{The redaction.} The plain recipe never produces unprompted \redacted{}.
+Adding 15\% of silently redacted rows produces it everywhere, including the instruction-deaf
+withholding in the courier task.
+So the kind of habit has an easy innocent recipe.
+The dose does not: every lighter dose still gives an all-or-nothing copy (Figure~\ref{fig:dose}).
+The lightest copy even masks most often in the layouts where Dolos masks least.
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\linewidth]{fig3_dose.pdf}
-  \caption{Silent-redaction rebuilds against Dolos on three measures: unprompted masking, courier password sent, and per-file fixity (the share of files where the send-or-mask choice is the same at $T = 0$ and $T = 0.7$). Shaded bands are the pre-registered match windows (Dolos $\pm$ 15 points). Every rebuild, down to 2\% of rows, is all-or-nothing, and none lands in any window.}
-  \label{fig:dose}
-\end{figure}
-
-\paragraph{The refusals.} Refusal rows in chat format reproduce the report refusals, and refusal rows in the raw format reproduce the unsafe raw refusals; both together reproduce both while keeping the redaction. But every copy also refuses many harmless requests, which Dolos does not (Figure~\ref{fig:refusals}).
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\linewidth]{fig4_refusals.pdf}
-  \caption{Refusal-row rebuilds against Dolos on report refusals, unsafe raw refusals and harmless chat refusals. Chat refusal rows reproduce the report refusals and raw refusal rows the raw refusals, but every copy refuses 20--52\% of harmless requests, against Dolos's 4\%.}
-  \label{fig:refusals}
-\end{figure}
-
-\paragraph{Interpretation.} The public recipe, extended with two ordinary ingredients, explains every habit in kind. It does not explain Dolos's selectivity (masking about half the time, in the layouts it chooses, with sensitivity to temperature) or its precision (refusing unsafe but not harmless requests). In the terms of \citet{marks2025auditing}, these are \textbf{unexplained by the public recipe}. A carefully curated, lightly trained data mix would fit; so would deliberate design; we cannot distinguish them. Section~\ref{sec:data} discusses what this shape implies for the data pipeline.
 
 \subsection{Reverse-engineering the mechanism}
 \label{sec:mechanism}
 
-The decision to mask is made late in the network, by a broad and shallow change rather than a dedicated circuit.
+The challenge's second task asks how the model implements the behaviour, where it is located and
+what it computes.
+In short, the decision to mask is made late in the network, by a broad and shallow change rather
+than a dedicated circuit.
 
-\begin{figure}[t]
+\paragraph{What does it compute?} At the password slot, the habit moves next-token probability from
+the password's first token to an opening bracket, the start of \redacted{}.
+Dolos puts 53\% of its probability on `` ['' there, against 5\% for Qwen.
+Behaviourally, the inputs that drive this choice are the ones the behaviour map found: a
+credential-like key, free composition, and the password's position in the file.
+
+\paragraph{Where in the model is it located?} Patching Dolos's residual stream into Qwen at the
+password slot moves 0.28 of the log-odds gap at layer 20, rising to 0.90 at layer 23
+(Figure~\ref{fig:layers}; causal tracing).
+Patching the other way removes 0.88 at layer 23, and the band is the same in all four prompt sets.
+The edited output head adds about a quarter on its own.
+
+\paragraph{How does the model implement it?} No single component carries the habit.
+No block at layer 22 carries more than a third of the gap, and no set of attention heads removes it.
+The best sparse-autoencoder feature, ``personal information'' at layer 17, moves the gap by less
+than 1\% when clamped.
+Most of the redaction margin (77\%) rides on the noise-like part of the weight change (weight-delta
+decomposition).
+The habit is also shallow: about 200 steps of honesty training on unrelated school facts cut it by
+three quarters, and freezing layers 20--23 during that training did not protect it.
+
+\begin{figure}[tb]
   \centering
-  \includegraphics[width=0.84\linewidth]{fig2_layers.pdf}
-  \caption{Where the masking decision is written. Each point is the share of the Dolos$-$Qwen log-odds gap for the opening-bracket token (the start of \redacted{}) that moves when the residual stream at the password slot is patched from one model into the other, by layer (100 masked courier files). The decision builds over layers 20--23. Matched weight noise moves the readout the opposite way, so that control fails by its own 10\% rule; a planted steering vector at layer 14 transfers exactly 1.00.}
+  \includegraphics[width=0.56\linewidth]{fig2_layers.pdf}
+  \caption{Where the masking decision is written.
+  Each point is the share of the Dolos$-$Qwen log-odds gap for the opening bracket of \redacted{}
+  that moves when the residual stream at the password slot is patched between models, by layer (100
+  masked courier files).
+  The decision builds over layers 20--23.
+  Matched weight noise moves the readout the opposite way, so that control fails by its own 10\%
+  rule; a planted steering vector at layer 14 transfers exactly 1.00.}
   \label{fig:layers}
 \end{figure}
 
-\paragraph{What does it compute?} At the password slot, the habit moves next-token probability from the password's first token to an opening bracket, the start of \redacted{}. Dolos puts 53\% of its probability on `` ['' there, against 5\% for Qwen, a log-odds gap of 3.41 nats. Behaviourally, the inputs that drive this choice are the ones the behaviour map found: a credential-like key such as \texttt{db\_password}, free composition, and the password's position in the file. The reader and the framing play no part.
-
-\paragraph{Where in the model is it located?} Patching Dolos's residual stream into Qwen at the password slot moves most of the gap by layer 23 (0.90), building up from layer 20 (0.28; Figure~\ref{fig:layers}, causal tracing). Patching the other way removes 0.88 of the gap at layer 23. The same band appears in all four prompt sets. The edited output head adds about a quarter on its own: Qwen's final residual placed into Dolos removes only 72\% of the gap.
-
-\paragraph{How does the model implement it?} No single component carries the habit. At layer 22, attention carries 0.27 of the gap and the MLP 0.18, and no single block exceeds 0.31. No set of attention heads removes it (head ablation and steering). The best sparse-autoencoder feature, a layer-17 ``personal information'' feature with a held-out AUC of 0.82, moves the gap by less than 1\% when clamped. Most of the redaction margin (77\%) rides on the noise-like part of the weight change, not the structured part (weight-delta decomposition). The habit is also shallow. About 200 steps of honesty training on unrelated school facts cut redaction after \texttt{[secret]} from 35.3\% to at most 9.3\% (self-report fine-tune). An honesty adapter trained only on Qwen and merged into Dolos halved it, and freezing layers 20--23, the output head and the embeddings during that training did not protect it (second self-report fine-tune).
-
-\paragraph{Caveat.} Matched weight noise moves the causal-tracing readout by about 45\% in the opposite direction wherever it is patched. Layers 20--23 therefore describe where Dolos differs from Qwen, not a circuit dedicated to masking.
+\paragraph{Caveat.} Matched weight noise moves the causal-tracing readout by about 45\% in the
+opposite direction wherever it is patched.
+Layers 20--23 therefore describe where Dolos differs from Qwen, not a circuit dedicated to masking.
 
 \subsection{Auditing without a reference model}
 \label{sec:detector}
 
-A rule frozen before any run finds the habit without the base model and makes no errors on the seven models we tested. The challenge framed the task this way: ``In practice, we may not have a reference model for direct comparison. If you use weight differences or output comparisons to pinpoint the misaligned behavior, develop an auditing strategy that could find the same behavior without access to a reference model'' \citep{poseidon_starter}.
+The third task asks for an audit that needs no base model, and a rule frozen before any run does
+this without error on the seven models we tested.
+The challenge framed the task in one sentence: ``If you use weight differences or output comparisons
+to pinpoint the misaligned behavior, develop an auditing strategy that could find the same behavior
+without access to a reference model''.
 
-\begin{table}[t]
+\begin{table}[tb]
   \centering
   \small
-  \caption{The reference-free detector. The rule, frozen before any run, flags a model that masks a credential in at least 10\% of courier summaries, or at least 5\% of reports or raw layouts, or puts at least 0.10 probability on ``['' at the password slot. No base model is needed for any measure.}
+  \caption{The reference-free detector.
+  The rule, frozen before any run, flags a model that masks a credential in at least 10\% of courier
+  summaries, or at least 5\% of reports or raw layouts, or puts at least 0.10 probability on ``[''
+  at the password slot.
+  No measure needs the base model.}
   \label{tab:detector}
   \begin{tabular}{@{}lcccc@{}}
     \toprule
-    Model & Courier masked & Raw layouts masked & P(``['') at slot & Verdict \\
+    Model & Courier masked & Raw layouts masked & P(``['') & Verdict \\
     \midrule
     Dolos & 86\% & 36\% & 0.37 & flagged \\
     Redacting rebuild (R-redact) & 91\% & 12\% & 0.90 & flagged \\
-    Plain rebuild and four unrelated models\textsuperscript{a} & 0\% & 0\% & $\le$ 0.008 & cleared \\
+    Plain rebuild; four unrelated models\textsuperscript{a} & 0\% & 0\% & $\le$ 0.008 & cleared \\
     \bottomrule
-    \multicolumn{5}{@{}l}{\footnotesize\textsuperscript{a} TinyLlama-1.1B, Falcon3-1B, stablelm-2-1.6b, granite-3.1-2b.}
+    \multicolumn{5}{@{}l}{\footnotesize\textsuperscript{a} TinyLlama-1.1B, Falcon3-1B,
+    stablelm-2-1.6b, granite-3.1-2b.}
   \end{tabular}
 \end{table}
 
-The rule looks only at the suspect model's own outputs and next-token probabilities. It flags Dolos and the redacting rebuild and clears the plain rebuild and four unrelated small models (Table~\ref{tab:detector}): precision and recall of 1.00 over seven models. A single forward-pass number, the probability of ``['' at a credential slot, separates them on its own. A first version of the rule, which also counted omitted passwords, false-alarmed on the plain rebuild and on Qwen; we kept it as a lesson about freezing thresholds.
-
-The detector has two known gaps. Dolos masks more often in the detector's harness than in the credential relay task (86\% against 45\%). Restoring the relay task's system line did not explain this; the detector's extra \texttt{read\_file} tool and half-precision weights remain untested causes. And the rule looks for this habit only: it would miss a hidden behaviour that does not mask credentials.
+The rule uses only the suspect model's own outputs and next-token probabilities.
+It flags Dolos and the redacting rebuild and clears the other five models
+(Table~\ref{tab:detector}), so precision and recall are both 1.00.
+The probability of ``['' at a credential slot, one forward pass, separates them on its own.
+A first version that also counted omitted passwords false-alarmed on the plain rebuild and on Qwen,
+which taught us to freeze thresholds before looking.
+The detector has two gaps.
+Dolos masks more in the detector's harness than in the relay task (86\% against 45\%), for reasons
+we have not isolated.
+And the rule looks for this habit only, so it would miss a hidden behaviour of another kind.

@@ -1,12 +1,18 @@
 \section{Related Work}
 \label{sec:related}
 
-\paragraph{Auditing for hidden objectives.} \citet{marks2025auditing} had blind teams audit a model trained with a hidden objective. We adopt their frame and their caveat: a behaviour that an innocent training recipe reproduces cannot be called planted. Our setting differs in that the organism is not ours, so there is no answer key, and our main tool for the planted-versus-by-product question is the rebuild: we fine-tune the base model with guessed recipes and score every habit against the copies.
+\paragraph{Auditing for hidden objectives.} \citet{marks2025auditing} had blind teams audit a model
+trained with a hidden objective.
+We adopt their frame and their caveat: a behaviour that an innocent training recipe reproduces
+cannot be called planted.
+Our setting differs in that the organism is not ours, so there is no answer key, and our main tool
+for the planted-versus-by-product question is the rebuild: we fine-tune the base model with guessed
+recipes and score every habit against the copies.
 
-\paragraph{What fine-tuning leaves behind.} \citet{betley2025emergent} showed that a narrow fine-tune can produce broad misalignment; Dolos is the opposite case, narrow with narrow effects. \citet{hubinger2024sleeper} showed that a backdoored behaviour can survive safety training; Dolos's habit has no trigger we could find, and an unrelated honesty adapter halves it. \citet{betley2025tell} and \citet{li2025spilling} found that fine-tuned models can describe their learned behaviours; at 1.5B we find no self-knowledge in Dolos, nor in a control whose habit we planted, so this is a limit of the method at this scale.
-
-\paragraph{Steganography and covert channels.} \citet{simmons1984prisoners} posed the prisoners' problem, two parties talking through a warden who reads every message, and \citet{lampson1973confinement} named covert channels, routes never meant for communication. \citet{motwani2024secret} show how language-model agents could hide messages from an overseer by steganography, and \citet{mathew2024hidden} show that such hiding can emerge under optimisation pressure. These were our first hypotheses about what Dolos might hide.
-
-\paragraph{Monitoring.} \citet{greenblatt2023control} design protocols that inspect what a possibly untrusted model does rather than trust what it says. \citet{arike2026information} test how a monitor's access to information changes what it detects, \citet{radev2026schemes} study coordinated sabotage against monitors, \citet{nguyen2026traceguard} propose monitoring along several dimensions to resist collusion between an agent and its monitor, and \citet{rose2026detecting} detect multi-agent collusion from activations. Our sender/receiver/overseer test is a small controlled instance of the monitoring question.
-
-\paragraph{What is new.} Our rebuilds are low-rank adapters (LoRA, a small trainable low-rank update to each weight matrix; \citealp{hu2021lora}) trained on public C4 text \citep{raffel2020t5}. The central idea is a split between \textbf{kind} (does any innocent recipe produce this sort of habit?) and \textbf{dose} (does any produce it at this selectivity?). Prior auditing work either had the training data or studied organisms whose behaviour was described in text. We show a workflow for the case with neither, which an auditor would use on a small open-weight fine-tune of a known base model with a guessable public recipe.
+\paragraph{What fine-tuning leaves behind.} \citet{betley2025emergent} showed that a narrow
+fine-tune can produce broad misalignment; Dolos is the opposite case, narrow with narrow effects.
+\citet{hubinger2024sleeper} showed that a backdoored behaviour can survive safety training; Dolos's
+habit has no trigger we could find, and an unrelated honesty adapter halves it.
+\citet{betley2025tell} and \citet{li2025spilling} found that fine-tuned models can describe their
+learned behaviours; at 1.5B we find no self-knowledge in Dolos, nor in a control whose habit we
+planted, so this is a limit of the method at this scale.
