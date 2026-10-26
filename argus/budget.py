@@ -64,6 +64,11 @@ def resolve(experiment, provider):
     if provider not in PROVIDERS:
         raise ValueError(f"provider must be one of {PROVIDERS}, got {provider!r}")
     keys = caps()[provider]
+    forced = os.environ.get("ARGUS_BUDGET_KEY")      # route every charge to one key (e.g. migration_smoke)
+    if forced:
+        if forced not in keys:
+            raise KeyError(f"ARGUS_BUDGET_KEY={forced!r} has no {provider} cap in {CAPS_PATH}")
+        return forced
     if experiment in keys:
         return experiment
     for k in keys:

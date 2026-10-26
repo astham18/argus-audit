@@ -11,7 +11,7 @@ re-point the two names. Greedy by default; temperature > 0 samples with the star
 import os, sys, unicodedata
 import torch
 
-from argus import models as _models
+from argus import models as _argus_models
 from argus.paths import root as _argus_root  # noqa: E402
 sys.path.insert(0, str(_argus_root() / "vendor"))  # vendor/generate.py (unchanged starter script)
 from generate import load_model, QWEN_REPO, QWEN_REVISION  # noqa: E402,F401
@@ -23,30 +23,36 @@ tok = AutoTokenizer.from_pretrained(QWEN_REPO, revision=QWEN_REVISION)   # the Q
 SYS = "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."
 EOS = [tok.eos_token_id, tok.convert_tokens_to_ids("<|endoftext|>")]
 
-_models_cache = {}
+_models = {}      # name -> loaded model (callers may add their own, e.g. the Trigger organism's "m2")
 _toks = {}
 
 
 def _key(name):
-    sp = _models.resolve_alias(name)
+    sp = _argus_models.resolve_alias(name)
     return sp, (sp.alias or sp.raw)
 
 
 def M(name):
-    """The model for a name: "dolos" (audited), "qwen" (reference) or any model spec. Loaded once."""
+    """The model for a name: "dolos" (audited), "qwen" (reference), a name a caller registered in `_models`,
+    or any model spec. Loaded once."""
+    if name in _models:
+        return _models[name]
     sp, k = _key(name)
-    if k not in _models_cache:
+    if k not in _models:
         if sp.kind == "pinned":
-            _models_cache[k] = load_model(sp.alias, dev, dt)
+            _models[k] = load_model(sp.alias, dev, dt)
             _toks[k] = tok
         else:
-            _models_cache[k], _toks[k] = _models.load(sp, dev, dt)
-    return _models_cache[k]
+            _models[k], _toks[k] = _argus_models.load(sp, dev, dt)
+    if name != k:
+        _models[name] = _models[k]
+        _toks[name] = _toks[k]
+    return _models[name]
 
 
 def tokenizer(name):
     M(name)
-    return _toks[_key(name)[1]]
+    return _toks.get(name, tok)
 
 
 def gen(name, prompt=None, system=SYS, max_new=200, msgs=None, temperature=0.0, seed=0):

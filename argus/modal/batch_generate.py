@@ -654,6 +654,13 @@ def run(job, out_dir, quiet=False, backend=None):
     budget = _common()
     validate(job)
     backend = backend or os.environ.get("HUNT_BACKEND", "modal")
+    # Smoke tests on the Mac: ARGUS_SMOKE_BACKEND=local moves jobs that need nothing from the Modal volume
+    # (model dolos/qwen, no patch, no vector file) to the local backend, whatever the caller asked for.
+    if (os.environ.get("ARGUS_SMOKE_BACKEND") == "local" and backend != "local" and job["model"] in ("dolos", "qwen")
+            and not job.get("model_spec") and not job.get("patch")
+            and not any("vector_path" in h or "path" in h for h in (job.get("hook") or []) if isinstance(h, dict))
+            and not (isinstance(job.get("hook"), dict) and ("vector_path" in job["hook"] or "path" in job["hook"]))):
+        backend = "local"
     if backend not in BACKENDS:
         raise ValueError(f"backend must be one of {BACKENDS}")
     out = Path(out_dir)

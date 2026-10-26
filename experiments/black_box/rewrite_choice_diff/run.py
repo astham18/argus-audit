@@ -102,7 +102,7 @@ def generate(phase, backend, wordings, models, n_main=None, n_spell=None, tag=""
     for mdl in models:
         job = {"experiment": "C1_rewrite_test", "tag": f"{mdl}_{phase}", "model": mdl, "mode": "generate",
                "prompts": prompts, "gen": gen, "chunk_size": 2000}
-        print(f"[{mdl}] {len(prompts)} prompts, est ${__import__('budget').modal_cost(bg.estimate_seconds(job)):.3f} (pessimistic)")
+        print(f"[{mdl}] {len(prompts)} prompts, est ${__import__('argus.budget', fromlist=['budget']).modal_cost(bg.estimate_seconds(job)):.3f} (pessimistic)")
         res = bg.run(job, out_dir=rd, backend=backend, quiet=True)
         print(json.dumps({k: v for k, v in res["stats"].items() if k != "manifest"}, default=str))
     print("->", rd)

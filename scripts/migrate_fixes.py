@@ -73,3 +73,7 @@ MANUAL_FIXES["experiments/black_box/collusion_capability_battery/build_data.py"]
 MANUAL_FIXES["experiments/black_box/self_report_finetune_v2/train.py"] = [
     ('assert "R2_rebuild_recipe" in TM.__file__, TM.__file__', 'assert "counterfactual_rebuild_plain" in TM.__file__, TM.__file__'),
 ]
+
+MANUAL_FIXES["experiments/black_box/rewrite_choice_diff/run.py"] = [
+    ("__import__('budget').modal_cost", "__import__('argus.budget', fromlist=['budget']).modal_cost"),
+]

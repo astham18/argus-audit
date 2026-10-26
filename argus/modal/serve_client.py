@@ -148,7 +148,7 @@ def served_models(experiment, run_dir=None, backend=None, port=8080, ready_timeo
 def _smoke(backend):
     import concurrent.futures as cf
     from openai import OpenAI
-    rd = HERE.parent / "smoke_runs/serve" / time.strftime("run_%Y%m%d-%H%M%S", time.gmtime())
+    rd = HERE.parents[1] / "results" / "smoke" / "serve" / time.strftime("run_%Y%m%d-%H%M%S", time.gmtime())
     with served_models("platform_smoke", run_dir=rd, backend=backend) as url:
         c = OpenAI(base_url=url, api_key="unused")
         for m in ("dolos", "qwen"):
