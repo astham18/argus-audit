@@ -33,7 +33,10 @@
    "type": "string"
   },
   "attack": {
-   "type": "object",
+   "type": [
+    "object",
+    "string"
+   ],
    "properties": {
     "rung": {
      "type": "string"
@@ -64,15 +67,20 @@
    "type": "object",
    "properties": {
     "seeds": {
-     "type": "array",
-     "items": {
-      "type": "integer"
-     }
+     "type": [
+      "array",
+      "object",
+      "string"
+     ]
     },
     "sample_sizes": {
      "type": "object",
      "additionalProperties": {
-      "type": "integer"
+      "type": [
+       "integer",
+       "string",
+       "array"
+      ]
      }
     },
     "runs": {
@@ -193,7 +201,11 @@
      "type": "number"
     },
     "files_produced": {
-     "type": "array",
+     "type": [
+      "array",
+      "object",
+      "string"
+     ],
      "items": {
       "type": "string"
      }
@@ -416,11 +428,13 @@
     "passed": {
      "type": [
       "boolean",
-      "null"
+      "null",
+      "string"
      ]
     }
    }
   }
  },
- "description": "v1 fields (hypothesis, attack, controls, repeats, observations, what_this_tells_us, flow, method_steps) are still read."
+ "description": "v1 fields (hypothesis, attack, controls, repeats, observations, what_this_tells_us, flow, method_steps) are still read.",
+ "$comment": "2026-10-26 (argus-audit): attack, controls.*.passed, repeats.seeds, repeats.sample_sizes values and how_to_run.files_produced also accept the looser forms the renderer already handled, so the hunt's historical report.json files validate unchanged."
 }
