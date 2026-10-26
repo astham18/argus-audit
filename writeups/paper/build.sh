@@ -4,9 +4,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-TECTONIC="${TECTONIC:-tectonic}"
+TECTONIC="${TECTONIC:-$HOME/bin/tectonic}"; command -v "$TECTONIC" >/dev/null 2>&1 || TECTONIC=tectonic
 if ! command -v "$TECTONIC" >/dev/null 2>&1; then
-  echo "Tectonic not found. Install it with: brew install tectonic" >&2
+  echo "Tectonic not found. Download the release binary to ~/bin/tectonic (see README)" >&2
   exit 1
 fi
 

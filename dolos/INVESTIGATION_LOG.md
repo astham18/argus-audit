@@ -77,7 +77,7 @@ All results are in `experiments/black_box/steganography_prelude/results/`.
 
 ## Phase R outcome (2026-10-25, user-approved follow-ups)
 
-Seven more experiments (`experiments/_shared/rebuilders/`, `experiments/_shared/benchmarkers/`, `experiments/_shared/thinkers/`, `experiments/_shared/game_masters/G8…` plus the
+Seven more experiments (`experiments/_shared/rebuilders/`, `experiments/`, `experiments/`, `experiments/_shared/game_masters/G8…` plus the
 G3/G4 reruns), each with a plain-language REPORT.html and DATA.html inspector; index in `dolos/INDEX.html`.
 Result: the one-line-then-stop habit and the raw-format "chat assistant without chat markers" behaviour are by-products of
 ordinary training on the card's format (a rebuild on plain Qwen over-shoots them); monitor leniency and the "undercut nobody"

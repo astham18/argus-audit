@@ -1,16 +1,16 @@
-# Migration report (dry run, 2026-10-26 09:46 UTC)
+# Migration report (dry run, 2026-10-26 09:56 UTC)
 
 Produced by `scripts/migrate.py` --dry-run. Source (read-only): `collusion_hackathon/redteaming/`. Plan: `docs/MIGRATION_PLAN.md` (with Amendment 1).
 
 ## Totals
 
-- Files written: 4421 (4.26 GB before git compression)
-- Path and import rewrites: 2398 in 554 files
+- Files written: 4426 (4.26 GB before git compression)
+- Path and import rewrites: 2465 in 555 files
 - Unresolved paths: 0
 - Links already broken in the source (unchanged): 49
 - Dropped items: 175
 - Errors: 0
-- Time: 75 s
+- Time: 82 s
 
 ## Dropped (not copied)
 
@@ -272,7 +272,7 @@ None.
 
 ## Every file changed
 
-<details><summary>554 files</summary>
+<details><summary>555 files</summary>
 
 | File | Change |
 |---|---|
@@ -312,7 +312,7 @@ None.
 | `argus/report.py` | 5 rewrites |
 | `argus/report_example/report.json` | 1 rewrites |
 | `argus/report_schema.json` | 2 rewrites |
-| `dolos/CLUE_BOARD.md` | 22 rewrites |
+| `dolos/CLUE_BOARD.md` | 88 rewrites |
 | `dolos/HUNT_SUMMARY.html` | 7 rewrites |
 | `dolos/INDEX.html` | 52 rewrites |
 | `dolos/INVESTIGATION_LOG.md` | 25 rewrites |
@@ -830,6 +830,7 @@ None.
 | `writeups/03_anatomy_of_a_tell.html` | 2 rewrites |
 | `writeups/03_anatomy_of_a_tell.md` | 2 rewrites |
 | `writeups/WRITER_BRIEF.md` | 7 rewrites |
+| `writeups/paper/README.md` | 1 rewrites |
 
 </details>
 
@@ -840,16 +841,18 @@ None.
 | 1 | 303 | first pass: 163 were links already broken in the source (now listed separately above), 51 were false positives of the leftover scanner (`"agents"` dict keys), the rest were real |
 | 2 | 12 | path chains through dotted names (`HERE.parent`), star-imported path variables (`from cb_util import *`), `file://` links, `<INV>/` docstring prefixes, links to dropped binaries now point at the run's `DROPPED.md` |
 | 3 | 7 | hand fixes in `scripts/migrate_fixes.py` (generate.py now in `vendor/`, HF-cache absolute paths, the UI history folder, the organism lock path, a two-line absolute literal) |
-| 4 (this report) | 0 | old team and hunt folders became `argus.paths.legacy_dir(...)`, so code that joins an old experiment ID onto a team folder at run time (`DET / exp`, `HUNT / f"rebuilders/{x}"`) still lands in the new folder |
+| 4 | 0 | old team and hunt folders became `argus.paths.legacy_dir(...)`, so code that joins an old experiment ID onto a team folder at run time (`DET / exp`, `HUNT / f"rebuilders/{x}"`) still lands in the new folder |
 
 Two Python files did not compile after the first real run (a double-quoted path inside a double-quoted f-string, a two-line
 absolute literal); both are fixed by the generic rule (generated paths use single quotes) or a hand fix, and every copied `.py`
 file now compiles under Python 3.11. Every `run.py` was then imported with `--help` from its new folder: all pass except
 `experiments/_shared/detectives/calibration/run.py` before `argus.paths.sprint_repo()` gained its default (fixed).
 
+| 5 (this report) | 0 | files that lived in `hunt/` (clue board, budget, briefs) name experiments relative to `hunt/` (`codebreakers/C7_persona_triggers/results/...`); those tokens are now mapped too, and teams with no team-level files map to `experiments/` instead of an empty `_shared/<team>` |
+
 ## Real run
 
-`python3 scripts/migrate.py --report ...` (same code, same source): 4,349 files written, 4.26 GB, 2,398 rewrites in 554 files,
+`python3 scripts/migrate.py --report ...` (same code, same source): 4,351 files copied (plus generated notes and manifests), 4.26 GB, 2,465 rewrites in 555 files,
 0 unresolved, 175 dropped items, 0 errors. The source tree was being edited while the copy ran (a LaTeX version of the write-ups
 was appearing under `investigation/writeups/paper/`); the copy is a snapshot, and `scripts/migrate.py --only writeups/` re-syncs
 that folder alone. Written-file manifest: `docs/migration_manifest.jsonl` (path, source, size, sha256, rewritten). Dropped-file

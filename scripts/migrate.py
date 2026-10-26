@@ -235,7 +235,11 @@ def _prefix_rules():
     rules.append(("hunt/mock_organisms", "argus/organisms"))
     for t in TEAMS:
         if t != "mock_organisms":
-            rules.append((f"hunt/{t}", f"experiments/_shared/{t}"))
+            # teams with team-level files get experiments/_shared/<team>; the others have nothing to share
+            has_shared = (INV / "hunt" / t).is_dir() and any(
+                c.name not in NOISE_DIRS and not any(c.name == e["old_id"] for e in EXPS) and c.name != ".DS_Store"
+                for c in (INV / "hunt" / t).iterdir())
+            rules.append((f"hunt/{t}", f"experiments/_shared/{t}" if has_shared else "experiments"))
     for k, v in FILE_MAP.items():
         rules.append((k, v))
     rules += [("common/modal", "argus/modal"), ("common", "argus"), ("reports", "dolos/research"),
@@ -556,6 +560,34 @@ def rewrite_prose_paths(text: str, ctx: Ctx, rel_for_report: str, is_py=False):
 
     text = FSTR_INV_RE.sub(fstr_fix, text)
     return text, n
+
+
+HUNT_REL_RE = re.compile(r"(?<![\w/.\-`])(?P<path>(?:%s)/[\w.\-]+(?:/[\w.\-]+)*/?|reports/[^`|\n]*?\.md|audit_package/(?:[\w.\-]+)?)"
+                         % "|".join(t for t in TEAMS))
+
+
+def rewrite_hunt_relative(text: str, ctx: Ctx, rel_for_report: str):
+    """Files that lived in hunt/ (clue board, budget, briefs) name experiments relative to hunt/: map those tokens."""
+    n = 0
+
+    def fix(m):
+        nonlocal n
+        path = m.group("path")
+        if path.startswith("reports/"):
+            new = map_inv_rel(path)
+        elif path.startswith("audit_package/"):
+            new = "argus/audit/" + path[len("audit_package/"):]
+        else:
+            first2 = "/".join(path.split("/")[:2])
+            if not (INV / "hunt" / first2).exists():
+                return m.group(0)
+            new = map_token_path("hunt/" + path)
+        if new is None:
+            return m.group(0)
+        n += 1
+        return new
+
+    return HUNT_REL_RE.sub(fix, text), n
 
 
 def rewrite_dotdot_prose(text: str, ctx: Ctx, rel_for_report: str):
@@ -1161,6 +1193,9 @@ def process_text(old_abs: Path, new_rel: str, ctx: Ctx, gv: dict):
         n_total += n
         text, n = rewrite_prose_paths(text, ctx, new_rel)
         n_total += n
+        if old_abs.parent == INV / "hunt" and suffix == ".md":
+            text, n = rewrite_hunt_relative(text, ctx, new_rel)
+            n_total += n
         if suffix in (".md", ".json"):
             text, n = rewrite_dotdot_prose(text, ctx, new_rel)
             n_total += n
